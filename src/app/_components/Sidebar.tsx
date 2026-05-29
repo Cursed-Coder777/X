@@ -13,21 +13,25 @@ import {
   Feather,
 } from "lucide-react";
 
-const navItems = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: Search, label: "Explore", href: "/explore" },
-  { icon: Bell, label: "Notifications", href: "/notifications" },
-  { icon: Mail, label: "Messages", href: "/messages" },
-  { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
-  { icon: User, label: "Profile", href: "/profile" },
-];
-
 const X_BLUE = "rgb(29,155,240)";
 const X_BLUE_DARK = "rgb(26,140,216)";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  // Get username from session or derive from email
+  const username = session?.user?.username ?? session?.user?.email?.split("@")[0] ?? "";
+  const profileHref = username ? `/profile/${username}` : "/profile";
+
+  const navItems = [
+    { icon: Home, label: "Home", href: "/" },
+    { icon: Search, label: "Explore", href: "/explore" },
+    { icon: Bell, label: "Notifications", href: "/notifications" },
+    { icon: Mail, label: "Messages", href: "/messages" },
+    { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
+    { icon: User, label: "Profile", href: profileHref },
+  ];
 
   return (
     <aside className="flex flex-col h-screen sticky top-0 w-[88px] xl:w-[275px] px-2 xl:px-4 py-2">
@@ -38,29 +42,22 @@ export default function Sidebar() {
         </svg>
       </div>
 
-      {/* Nav Links */}
       <nav className="flex flex-col gap-1">
         {navItems.map(({ icon: Icon, label, href }) => {
-          const isActive = pathname === href;
+          const isActive = pathname === href || (label === "Profile" && pathname.startsWith("/profile/"));
           return (
             <Link
               key={href}
               href={href}
               className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full"
             >
-              <Icon
-                size={26}
-                strokeWidth={isActive ? 2.5 : 1.75}
-                className="flex-shrink-0"
-              />
+              <Icon size={26} strokeWidth={isActive ? 2.5 : 1.75} className="flex-shrink-0" />
               <span className={`hidden xl:block text-xl ${isActive ? "font-bold" : "font-normal"}`}>
                 {label}
               </span>
             </Link>
           );
         })}
-
-        {/* More */}
         <button className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full">
           <MoreHorizontal size={26} strokeWidth={1.75} className="flex-shrink-0" />
           <span className="hidden xl:block text-xl">More</span>
@@ -69,7 +66,6 @@ export default function Sidebar() {
 
       {/* Post Button */}
       <div className="mt-4 flex justify-center xl:justify-start">
-        {/* Wide */}
         <button
           className="hidden xl:flex items-center justify-center w-full py-3.5 rounded-full font-bold text-[17px] text-white"
           style={{ backgroundColor: X_BLUE }}
@@ -78,7 +74,6 @@ export default function Sidebar() {
         >
           Post
         </button>
-        {/* Narrow — feather icon */}
         <button
           className="xl:hidden flex items-center justify-center w-12 h-12 rounded-full text-white"
           style={{ backgroundColor: X_BLUE }}
@@ -89,9 +84,12 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Account */}
+      {/* Account – now a clickable link to profile */}
       {session?.user && (
-        <div className="mt-auto mb-3 flex items-center gap-3 p-3 rounded-full hover:bg-neutral-900 transition-colors cursor-pointer w-fit xl:w-full">
+        <Link
+          href={profileHref}
+          className="mt-auto mb-3 flex items-center gap-3 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full"
+        >
           <div className="h-10 w-10 rounded-full bg-neutral-700 flex-shrink-0 flex items-center justify-center overflow-hidden">
             {session.user.image ? (
               <img src={session.user.image} alt="avatar" className="w-full h-full object-cover" />
@@ -102,11 +100,11 @@ export default function Sidebar() {
           <div className="hidden xl:flex flex-col min-w-0 flex-1">
             <span className="font-bold text-[15px] truncate">{session.user.name}</span>
             <span className="text-neutral-500 text-[15px] truncate">
-              @{session.user.email?.split("@")[0]}
+              @{session.user.username ?? session.user.email?.split("@")[0]}
             </span>
           </div>
           <MoreHorizontal size={18} className="hidden xl:block text-neutral-500 flex-shrink-0" />
-        </div>
+        </Link>
       )}
     </aside>
   );

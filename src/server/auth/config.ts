@@ -1,14 +1,26 @@
+import type { JWT } from "next-auth/jwt";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { db } from "~/server/db";
 import { z } from "zod";
 
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    username: string;
+  }
+}
+
 declare module "next-auth" {
-  interface Session extends DefaultSession {
+  interface User {
+    username: string;
+  }
+  interface Session {
     user: {
       id: string;
+      username: string;
     } & DefaultSession["user"];
   }
 }
@@ -38,18 +50,29 @@ export const authConfig = {
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+        };
       },
     }),
   ],
   session: { strategy: "jwt" },
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.username = user.username;
+      }
       return token;
     },
     session({ session, token }) {
-      if (token.id) session.user.id = token.id as string;
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.username = token.username;
+      }
       return session;
     },
   },
@@ -57,4 +80,4 @@ export const authConfig = {
     signIn: "/auth/signin",
   },
   secret: process.env.AUTH_SECRET,
-} satisfies NextAuthConfig;
+};

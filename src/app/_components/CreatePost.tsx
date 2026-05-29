@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 import { Image as ImageIcon, Film, AlignLeft, Smile, Calendar, MapPin, User } from "lucide-react";
+import Image from "next/image";
 
 export default function CreatePost() {
   const { data: session } = useSession();
@@ -33,7 +34,7 @@ export default function CreatePost() {
     <div className="border-b border-neutral-800 p-4 flex gap-3">
       <div className="flex-shrink-0">
         {session?.user?.image ? (
-          <img src={session.user.image} alt="Avatar" className="h-10 w-10 rounded-full object-cover" />
+          <Image src={session.user.image} alt="Avatar" className="h-10 w-10 rounded-full object-cover" width={40} height={40} />
         ) : (
           <div className="h-10 w-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
             <User size={24} />
