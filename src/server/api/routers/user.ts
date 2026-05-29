@@ -1,44 +1,146 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcrypt";
-import { db } from "~/server/db";
 
 export const userRouter = createTRPCRouter({
-  // Registration mutation
   signup: publicProcedure
-    .input(
-      z.object({
-        name: z.string().min(2),
-        email: z.string().email(),
-        username: z.string().min(3),
-        password: z.string().min(6),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const { name, email, username, password } = input;
-
-      // Check existing user
-      const existingEmail = await db.user.findUnique({ where: { email } });
-      if (existingEmail) {
-        throw new TRPCError({ code: "CONFLICT", message: "Email already exists" });
+    .input(z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+      username: z.string().min(3),
+      password: z.string().min(6),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const exists = await ctx.db.user.findFirst({
+        where: { OR: [{ email: input.email }, { username: input.username }] },
+      });
+      if (exists) {
+        throw new TRPCError({ code: "CONFLICT", message: "User already exists." });
       }
-      const existingUsername = await db.user.findUnique({ where: { username } });
-      if (existingUsername) {
-        throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await db.user.create({
+      const hashedPassword = await bcrypt.hash(input.password, 10);
+      const user = await ctx.db.user.create({
         data: {
-          name,
-          email,
-          username,
+          name: input.name,
+          email: input.email,
+          username: input.username,
           password: hashedPassword,
         },
       });
+      return { id: user.id, email: user.email, username: user.username };
+    }),
 
-      // Return user without password
-      return { id: user.id, name: user.name, email: user.email, username: user.username };
+  // Get user by username (for profile page)
+  getByUsername: protectedProcedure
+    .input(z.object({ username: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { username: input.username },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          image: true,
+          bio: true,
+          createdAt: true,
+          _count: {
+            select: { followers: true, following: true, posts: true },
+          },
+        },
+      });
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      return user;
+    }),
+
+  // Check if current user follows a target user
+  isFollowing: protectedProcedure
+    .input(z.object({ targetUserId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const follow = await ctx.db.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: ctx.session.user.id,
+            followingId: input.targetUserId,
+          },
+        },
+      });
+      return { isFollowing: !!follow };
+    }),
+
+  // Toggle follow/unfollow
+  toggleFollow: protectedProcedure
+    .input(z.object({ targetUserId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { targetUserId } = input;
+      const currentUserId = ctx.session.user.id;
+
+      if (currentUserId === targetUserId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot follow yourself" });
+      }
+
+      const existing = await ctx.db.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: targetUserId,
+          },
+        },
+      });
+
+      if (existing) {
+        // Unfollow
+        await ctx.db.follow.delete({ where: { id: existing.id } });
+        return { following: false };
+      } else {
+        // Follow
+        await ctx.db.follow.create({
+          data: { followerId: currentUserId, followingId: targetUserId },
+        });
+        return { following: true };
+      }
+    }),
+
+  // Get user's posts (for profile page)
+  getUserPosts: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const posts = await ctx.db.post.findMany({
+        where: { authorId: input.userId },
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: { select: { name: true, username: true, image: true } },
+          likes: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+          _count: { select: { likes: true } },
+        },
+      });
+      return posts.map((post) => ({
+        ...post,
+        likedByUser: post.likes.length > 0,
+        likeCount: post._count.likes,
+        likes: undefined,
+        _count: undefined,
+      }));
+    }),
+
+  // Get follower/following lists (optional)
+  getFollowers: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const followers = await ctx.db.follow.findMany({
+        where: { followingId: input.userId },
+        include: { follower: { select: { id: true, name: true, username: true, image: true } } },
+      });
+      return followers.map((f) => f.follower);
+    }),
+
+  getFollowing: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const following = await ctx.db.follow.findMany({
+        where: { followerId: input.userId },
+        include: { following: { select: { id: true, name: true, username: true, image: true } } },
+      });
+      return following.map((f) => f.following);
     }),
 });

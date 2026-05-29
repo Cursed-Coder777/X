@@ -23,15 +23,17 @@ export const authConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = z.object({
-          email: z.string().email(),
-          password: z.string().min(6),
-        }).safeParse(credentials);
+        const parsed = z
+          .object({
+            email: z.string().email(),
+            password: z.string().min(6),
+          })
+          .safeParse(credentials);
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
         const user = await db.user.findUnique({ where: { email } });
-        if (!user || !user.password) return null;
+        if (!user?.password) return null;
 
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
@@ -47,7 +49,6 @@ export const authConfig = {
       return token;
     },
     session({ session, token }) {
-      // optional chain warning solve: session.user always exists, token.id check only
       if (token.id) session.user.id = token.id as string;
       return session;
     },
