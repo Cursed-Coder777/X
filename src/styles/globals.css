@@ -3,4 +3,10 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --color-x-blue: rgb(29, 155, 240);
+}
+
+body {
+  background-color: #000;
+  color: #fff;
 }

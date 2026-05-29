@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -22,7 +23,6 @@ export default function SignupPage() {
         redirect: false,
       });
       if (res?.ok) {
-        // Hard redirect to home – AuthGuard will take over
         window.location.href = "/";
       } else {
         alert("Signup successful but auto-login failed. Please login manually.");
@@ -43,61 +43,103 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-2xl font-bold">Create Account</h1>
-        {error && <p className="mb-4 text-red-500">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full rounded border p-2"
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full rounded border p-2"
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="text"
-            placeholder="Username"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            className="w-full rounded border p-2"
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="w-full rounded border p-2"
-            required
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded bg-blue-500 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isLoading ? "Creating account..." : "Sign Up"}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <a href="/auth/login" className="text-blue-500">
-            Sign in
-          </a>
-        </p>
+    <div className="min-h-screen bg-black text-white flex">
+      {/* Left: form area */}
+      <div className="flex flex-col items-center justify-center min-h-screen w-full lg:w-1/2">
+        {/* X Logo */}
+        <div className="mb-8">
+          <svg viewBox="0 0 24 24" className="h-9 w-9 fill-white" aria-label="X">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+        </div>
+
+        <h1 className="text-[clamp(28px,3vw,40px)] font-extrabold leading-tight mb-6 tracking-tight">
+          Join X today.
+        </h1>
+
+        <div className="flex flex-col gap-3 w-full max-w-[300px]">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <input
+              type="text"
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+              required
+              disabled={isLoading}
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+              required
+              disabled={isLoading}
+            />
+            <input
+              type="text"
+              placeholder="Username"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+              required
+              disabled={isLoading}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+              required
+              disabled={isLoading}
+            />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-full bg-white text-black font-bold text-[17px] py-2.5 hover:bg-neutral-200 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? "Creating account..." : "Create account"}
+            </button>
+          </form>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-neutral-800" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-black px-2 text-neutral-500">or</span>
+            </div>
+          </div>
+
+          <p className="text-neutral-500 text-[13px] text-center">
+            By signing up, you agree to our{" "}
+            <Link href="#" className="underline">Terms of Service</Link>,{" "}
+            <Link href="#" className="underline">Privacy Policy</Link>{" "}
+            and{" "}
+            <Link href="#" className="underline">Cookie Use</Link>.
+          </p>
+
+          <p className="text-[15px] mt-2 text-center">
+            Already have an account?{" "}
+            <Link href="/auth/login" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right: giant X watermark */}
+      <div className="hidden lg:flex flex-1 items-center justify-center">
+        <svg
+          viewBox="0 0 24 24"
+          className="w-[min(550px,45vw)] h-[min(550px,45vw)] fill-neutral-900"
+          aria-hidden="true"
+        >
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
       </div>
     </div>
   );

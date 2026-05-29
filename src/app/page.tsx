@@ -3,20 +3,22 @@ import { useState } from "react";
 import AuthGuard from "~/app/_components/AuthGuard";
 import CreatePost from "~/app/_components/CreatePost";
 import PostCard from "~/app/_components/PostCard";
+import Sidebar from "~/app/_components/Sidebar";
 import { api } from "~/trpc/react";
-import { cn } from "~/lib/utils"; // optional, or use simple class strings
 
 function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
   const { data: posts, isLoading, error } = api.post.getFeed.useQuery({ onlyFollowing });
 
-  if (isLoading) return <div className="p-4">Loading feed...</div>;
+  if (isLoading) return <div className="p-4 text-neutral-500">Loading feed...</div>;
   if (error) return <div className="p-4 text-red-500">Error loading feed</div>;
 
   return (
-    <div className="divide-y">
+    <div>
       {posts?.length === 0 && (
-        <div className="p-4 text-gray-500">
-          {onlyFollowing ? "No posts from followed users. Follow someone!" : "No posts yet. Be the first to post!"}
+        <div className="p-6 text-neutral-500 text-center">
+          {onlyFollowing
+            ? "No posts from followed users yet. Follow someone!"
+            : "No posts yet. Be the first to post!"}
         </div>
       )}
       {posts?.map((post) => (
@@ -31,33 +33,51 @@ export default function HomePage() {
 
   return (
     <AuthGuard>
-      <div className="max-w-2xl mx-auto border-x min-h-screen">
-        <div className="sticky top-0 bg-white border-b z-10">
-          <div className="flex">
+      <div className="min-h-screen bg-black text-white flex justify-center">
+        {/* Left Sidebar */}
+        <Sidebar />
+
+        {/* Center Feed */}
+        <main className="flex-1 max-w-[600px] border-x border-neutral-800 min-h-screen">
+          {/* Sticky Tab Header */}
+          <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800 flex">
             <button
               onClick={() => setTab("forYou")}
-              className={cn(
-                "flex-1 py-4 font-semibold transition-colors relative",
-                tab === "forYou" ? "text-blue-500" : "text-gray-500 hover:text-gray-700"
-              )}
+              className="flex-1 flex flex-col items-center pt-4 hover:bg-neutral-900/50 transition-colors"
             >
-              For You
-              {tab === "forYou" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-500 rounded-full" />}
+              <div className="relative pb-4">
+                <span className={`text-[15px] font-semibold ${tab === "forYou" ? "text-white" : "text-neutral-500"}`}>
+                  For you
+                </span>
+                {tab === "forYou" && (
+                  <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-500 rounded-full" />
+                )}
+              </div>
             </button>
             <button
               onClick={() => setTab("following")}
-              className={cn(
-                "flex-1 py-4 font-semibold transition-colors relative",
-                tab === "following" ? "text-blue-500" : "text-gray-500 hover:text-gray-700"
-              )}
+              className="flex-1 flex flex-col items-center pt-4 hover:bg-neutral-900/50 transition-colors"
             >
-              Following
-              {tab === "following" && <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-500 rounded-full" />}
+              <div className="relative pb-4">
+                <span className={`text-[15px] font-semibold ${tab === "following" ? "text-white" : "text-neutral-500"}`}>
+                  Following
+                </span>
+                {tab === "following" && (
+                  <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-500 rounded-full" />
+                )}
+              </div>
             </button>
           </div>
-        </div>
-        <CreatePost />
-        <Feed onlyFollowing={tab === "following"} />
+
+          {/* Create Post */}
+          <CreatePost />
+
+          {/* Feed */}
+          <Feed onlyFollowing={tab === "following"} />
+        </main>
+
+        {/* Right side spacer — no right sidebar yet */}
+        <div className="hidden lg:block w-[350px]" />
       </div>
     </AuthGuard>
   );
