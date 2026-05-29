@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
     provider = "prisma-client-js"
     output   = "../generated/prisma"
@@ -8,41 +5,107 @@ generator client {
 
 datasource db {
     provider = "sqlite"
-    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-    // Further reading:
-    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
     url      = env("DATABASE_URL")
 }
 
+model User {
+    id            String    @id @default(cuid())
+    name          String
+    email         String    @unique
+    emailVerified DateTime?
+    image         String?
+    username      String    @unique
+    bio           String?
+    password      String?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    posts     Post[]
+    likes     Like[]
+    bookmarks Bookmark[]
+    comments  Comment[]
+    following Follow[] @relation("following")
+    followers Follow[] @relation("followers")
+    accounts  Account[]   // ✅ opposite for Account.user
+    sessions  Session[]   // ✅ opposite for Session.user
+}
+
 model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
+    id        String   @id @default(cuid())
+    content   String
+    imageUrl  String?
+    authorId  String
+    author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
+    likes     Like[]
+    bookmarks Bookmark[]
+    comments  Comment[]
 }
 
-// Necessary for Next auth
+model Like {
+    id        String   @id @default(cuid())
+    userId    String
+    postId    String
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, postId])
+}
+
+model Bookmark {
+    id        String   @id @default(cuid())
+    userId    String
+    postId    String
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, postId])
+}
+
+model Comment {
+    id        String   @id @default(cuid())
+    content   String
+    userId    String
+    postId    String
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+    id          String   @id @default(cuid())
+    followerId  String
+    followingId String
+    createdAt   DateTime @default(now())
+
+    follower  User @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+    following User @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+    @@unique([followerId, followingId])
+}
+
+// Required for NextAuth PrismaAdapter
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String?
+    access_token      String?
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String?
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
 }
@@ -53,17 +116,6 @@ model Session {
     userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
 }
 
 model VerificationToken {
