@@ -2,6 +2,7 @@
 import { api } from "~/trpc/react";
 import { useState } from "react";
 import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User } from "lucide-react";
+import Image from "next/image";
 
 interface PostCardProps {
   id: string;
@@ -67,10 +68,13 @@ export default function PostCard({
       {/* Avatar */}
       <div className="flex-shrink-0">
         {author.image ? (
-          <img
+          <Image
             src={author.image}
             alt={author.name ?? "Avatar"}
             className="h-10 w-10 rounded-full object-cover"
+            width={40}
+            height={40}
+            priority
           />
         ) : (
           <div className="h-10 w-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">

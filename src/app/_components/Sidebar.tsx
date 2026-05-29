@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Feather,
 } from "lucide-react";
+import Image from "next/image";
 
 const X_BLUE = "rgb(29,155,240)";
 const X_BLUE_DARK = "rgb(26,140,216)";
@@ -20,7 +21,6 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
-  // Get username from session or derive from email
   const username = session?.user?.username ?? session?.user?.email?.split("@")[0] ?? "";
   const profileHref = username ? `/profile/${username}` : "/profile";
 
@@ -92,7 +92,7 @@ export default function Sidebar() {
         >
           <div className="h-10 w-10 rounded-full bg-neutral-700 flex-shrink-0 flex items-center justify-center overflow-hidden">
             {session.user.image ? (
-              <img src={session.user.image} alt="avatar" className="w-full h-full object-cover" />
+              <Image src={session.user.image} alt="avatar" className="w-full h-full object-cover" width={40} height={40} priority />
             ) : (
               <User size={20} className="text-neutral-400" />
             )}

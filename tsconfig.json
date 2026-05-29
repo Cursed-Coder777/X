@@ -37,6 +37,6 @@
     "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts"
-  ],
+,     "src/app/profile/[username]/page.tsx.txt"  ],
   "exclude": ["node_modules", "generated"]
 }
