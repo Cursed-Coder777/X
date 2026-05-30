@@ -94,9 +94,10 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ url: blob.url });
     } catch (err) {
-      console.error("Blob upload failed:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Blob upload failed:", message);
       return NextResponse.json(
-        { error: "Image upload failed. Check Vercel Blob config." },
+        { error: `Image upload failed: ${message}` },
         { status: 500 },
       );
     }
