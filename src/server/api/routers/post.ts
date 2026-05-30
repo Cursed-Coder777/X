@@ -378,6 +378,62 @@ export const postRouter = createTRPCRouter({
       }));
     }),
 
+  searchAll: protectedProcedure
+    .input(z.object({ query: z.string().min(1).max(100) }))
+    .query(async ({ ctx, input }) => {
+      const q = input.query;
+      const userId = ctx.session.user.id;
+      const isUserSearch = q.startsWith("@");
+      const term = isUserSearch ? q.slice(1) : q;
+
+      if (isUserSearch) {
+        const users = (await ctx.db.user.findMany({
+          where: { username: { contains: term } },
+          select: { id: true, name: true, username: true, image: true, bio: true },
+          take: 20,
+        })).filter((u) => u.id !== userId);
+        return { users, posts: [] };
+      }
+
+      const [users, posts] = await Promise.all([
+        (ctx.db.user.findMany({
+          where: { OR: [{ name: { contains: term } }, { username: { contains: term } }] },
+          select: { id: true, name: true, username: true, image: true, bio: true },
+          take: 10,
+        })).then((r) => r.filter((u) => u.id !== userId)),
+        ctx.db.post.findMany({
+          where: { content: { contains: term } },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: {
+            author: { select: { id: true, name: true, username: true, image: true } },
+            likes: { where: { userId }, select: { userId: true } },
+            bookmarks: { where: { userId }, select: { userId: true } },
+            reposts: { where: { userId }, select: { userId: true } },
+            _count: { select: { likes: true, comments: true, reposts: true } },
+          },
+        }),
+      ]);
+
+      return {
+        users,
+        posts: posts.map((post) => ({
+          ...post,
+          likedByUser: post.likes.length > 0,
+          bookmarkedByUser: post.bookmarks.length > 0,
+          repostedByUser: post.reposts.length > 0,
+          likeCount: post._count.likes,
+          commentCount: post._count.comments,
+          repostCount: post._count.reposts,
+          likes: undefined,
+          bookmarks: undefined,
+          reposts: undefined,
+          _count: undefined,
+          repostedBy: null,
+        })),
+      };
+    }),
+
   getTrending: protectedProcedure.query(async ({ ctx }) => {
     const recentPosts = await ctx.db.post.findMany({
       where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
