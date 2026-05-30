@@ -73,7 +73,7 @@ export default function LeftSidebar() {
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full"
+              className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full mx-auto xl:mx-0"
             >
               <span className="relative flex-shrink-0">
                 <Icon size={26} strokeWidth={isActive ? 2.5 : 1.75} />
@@ -116,7 +116,7 @@ export default function LeftSidebar() {
       {session?.user && (
         <Link
           href={profileHref}
-          className="mt-auto mb-3 flex items-center gap-3 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full"
+          className="mt-auto mb-3 flex items-center gap-3 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full mx-auto xl:mx-0"
         >
           <div className="h-10 w-10 rounded-full bg-neutral-700 flex-shrink-0 flex items-center justify-center overflow-hidden">
             {session.user.image ? (

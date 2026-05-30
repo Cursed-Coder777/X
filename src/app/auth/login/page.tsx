@@ -50,7 +50,7 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-black text-white flex">
       {/* Left: form area */}
-      <div className="flex flex-col items-center min-h-screen w-[50%] justify-center">
+      <div className="flex flex-col items-center min-h-screen w-full lg:w-1/2 px-4">
         {/* X Logo */}
         <div className="mb-10">
           <svg viewBox="0 0 24 24" className="h-9 w-9 fill-white" aria-label="X">

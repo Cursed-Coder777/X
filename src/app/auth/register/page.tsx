@@ -67,7 +67,7 @@ export default function SignupPage() {
           Join X today.
         </h1>
 
-        <div className="flex flex-col gap-3 w-full max-w-[300px]">
+        <div className="flex flex-col gap-3 w-full max-w-[300px] px-4">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <input
               type="text"

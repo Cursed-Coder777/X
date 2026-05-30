@@ -77,10 +77,10 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/10"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-[600px] mt-12 mb-12">
+      <div className="relative w-full max-w-[600px] mt-8 mb-12 mx-4">
         <div className="rounded-2xl border border-neutral-700 bg-black">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-700">

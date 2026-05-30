@@ -133,7 +133,7 @@ export default function PostCard({
         <div className="flex items-center gap-1 text-[15px]">
           <button
             onClick={(e) => { e.stopPropagation(); router.push(`/profile/${author.username ?? ""}`); }}
-            className="font-bold text-white leading-5 truncate max-w-[120px] hover:underline text-left"
+            className="font-bold text-white leading-5 truncate max-w-[120px] sm:max-w-[200px] hover:underline text-left"
           >
             {author.name ?? "Unknown"}
           </button>

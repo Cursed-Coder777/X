@@ -2,7 +2,6 @@
 import { useState, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Menu } from "lucide-react";
-import Link from "next/link";
 import LeftSidebar from "./LeftSidebar";
 import RightSidebar from "./RightSidebar";
 import MobileDrawer from "./MobileDrawer";
@@ -45,7 +44,7 @@ export default function ShellLayout({
       <main
         className={`flex-1 ${
           wide ? "max-w-[990px]" : "max-w-[600px]"
-        } border-x border-neutral-800 min-h-screen`}
+        } border-x border-neutral-800 max-lg:border-x-0 min-h-screen`}
       >
         {children}
       </main>

@@ -9,7 +9,13 @@ import { api } from "~/trpc/react";
 function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
   const { data: posts, isLoading, error } = api.post.getFeed.useQuery({ onlyFollowing });
 
-  if (isLoading) return <div className="p-4 text-neutral-500">Loading feed...</div>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <svg viewBox="0 0 24 24" className="h-8 w-8 fill-white animate-pulse" aria-label="Loading">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    </div>
+  );
   if (error) return <div className="p-4 text-red-500">Error loading feed</div>;
 
   return (
@@ -34,7 +40,7 @@ export default function HomePage() {
   return (
     <AuthGuard>
       <ShellLayout>
-        <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800 flex">
+        <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800 flex px-2">
           <button
             onClick={() => setTab("forYou")}
             className="flex-1 flex flex-col items-center pt-4 hover:bg-neutral-900/50 transition-colors"

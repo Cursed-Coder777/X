@@ -160,7 +160,7 @@ export default function CreatePost() {
             <button
               type="submit"
               disabled={(!content.trim() && !imageFile) || isPosting || uploading}
-              className="rounded-full px-4 py-1.5 font-bold text-white transition disabled:opacity-50"
+              className="rounded-full px-4 py-2 sm:py-1.5 font-bold text-white transition disabled:opacity-50"
               style={{ backgroundColor: "rgb(29,155,240)" }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = "rgb(26,140,216)";

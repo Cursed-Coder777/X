@@ -33,7 +33,7 @@ export default function RightSidebar() {
   };
 
   return (
-    <aside className="w-[350px] hidden lg:flex flex-col gap-4 px-6 py-3 h-screen sticky top-0 overflow-y-auto">
+    <aside className="w-[300px] xl:w-[350px] hidden lg:flex flex-col gap-4 px-4 xl:px-6 py-3 h-screen sticky top-0 overflow-y-auto">
       {/* Search bar */}
       <form onSubmit={handleSearch} className="sticky top-0 pt-1 pb-2 bg-black z-10">
         <div className="relative">

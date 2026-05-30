@@ -52,7 +52,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         <button
           type="submit"
           disabled={!content.trim() || createComment.isPending}
-          className="rounded-full bg-white px-4 py-1 text-sm font-bold text-black transition hover:bg-neutral-200 disabled:opacity-50"
+          className="rounded-full bg-white px-4 py-2 text-sm font-bold text-black transition hover:bg-neutral-200 disabled:opacity-50"
         >
           Reply
         </button>
