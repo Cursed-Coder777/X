@@ -1,3 +1,9 @@
+/**
+ * AuthGuard — protects routes that require authentication.
+ * If the user is unauthenticated, redirects to /auth/login.
+ * Shows a loading indicator while the session is being fetched.
+ * Renders children only when a valid session exists.
+ */
 "use client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -15,7 +21,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center text-neutral-500">
         Loading...
       </div>
     );

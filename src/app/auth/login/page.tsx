@@ -1,12 +1,23 @@
+/**
+ * Login page — two-step authentication flow.
+ * Step 1: Enter email or username (with disabled social provider buttons for UI).
+ * Step 2: Enter password with show/hide toggle.
+ *
+ * Uses NextAuth signIn() with credentials provider on form submission.
+ * On success, redirects to home. On error, displays error message.
+ * Large X watermark on the right side (desktop only).
+ */
 "use client";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignInPage() {
   const [step, setStep] = useState<"identifier" | "password">("identifier");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -128,9 +139,9 @@ export default function SignInPage() {
 
               <p className="text-[15px] mt-4">
                 Don&apos;t have an account?{" "}
-                <Link href="/auth/register" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
+                <a href="/auth/register" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
                   Sign up
-                </Link>
+                </a>
               </p>
             </div>
           </>
@@ -139,15 +150,25 @@ export default function SignInPage() {
           <div className="flex flex-col gap-3 w-full max-w-[300px]">
             <p className="text-neutral-400 text-sm mb-1">Signing in as <strong className="text-white">{identifier}</strong></p>
             <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
-                required
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 pr-12 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+                  required
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"

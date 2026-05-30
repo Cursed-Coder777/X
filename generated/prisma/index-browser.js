@@ -154,6 +154,13 @@ exports.Prisma.BookmarkScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.RepostScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  postId: 'postId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.CommentScalarFieldEnum = {
   id: 'id',
   content: 'content',
@@ -197,6 +204,25 @@ exports.Prisma.VerificationTokenScalarFieldEnum = {
   expires: 'expires'
 };
 
+exports.Prisma.ConversationScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ConversationParticipantScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  conversationId: 'conversationId'
+};
+
+exports.Prisma.MessageScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  senderId: 'senderId',
+  conversationId: 'conversationId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -213,11 +239,15 @@ exports.Prisma.ModelName = {
   Post: 'Post',
   Like: 'Like',
   Bookmark: 'Bookmark',
+  Repost: 'Repost',
   Comment: 'Comment',
   Follow: 'Follow',
   Account: 'Account',
   Session: 'Session',
-  VerificationToken: 'VerificationToken'
+  VerificationToken: 'VerificationToken',
+  Conversation: 'Conversation',
+  ConversationParticipant: 'ConversationParticipant',
+  Message: 'Message'
 };
 
 /**

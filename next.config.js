@@ -6,6 +6,7 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
+  // bcrypt uses Node.js native modules and must run on the server
   serverExternalPackages: ["bcrypt"],
 };
 

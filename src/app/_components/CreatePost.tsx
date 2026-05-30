@@ -1,24 +1,37 @@
+/**
+ * CreatePost — the post composer component at the top of the feed.
+ * Features:
+ * - User avatar display (or fallback icon)
+ * - Textarea with 280-char limit (X/Twitter style)
+ * - Character counter
+ * - Icon toolbar (media, GIF, poll, emoji, schedule, location — mostly UI only)
+ * - "Post" submit button with loading spinner overlay
+ * - Invalidates feed queries on successful post
+ */
 "use client";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
-import { Image as ImageIcon, Film, AlignLeft, Smile, Calendar, MapPin, User } from "lucide-react";
+import { Image as ImageIcon, Film, AlignLeft, Smile, Calendar, MapPin, User, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 export default function CreatePost() {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
   const utils = api.useUtils();
 
   const createPost = api.post.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setContent("");
-      // Properly handle the promise from invalidate
-      void utils.post.getAll.invalidate().catch((err) => {
-        console.error("Failed to invalidate posts:", err);
-      });
+      await Promise.all([
+        utils.post.getFeed.invalidate(),
+        utils.post.getAll.invalidate(),
+      ]).catch(console.error);
+      setIsPosting(false);
     },
     onError: (err) => {
+      setIsPosting(false);
       alert(err.message);
     },
   });
@@ -26,6 +39,7 @@ export default function CreatePost() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
+      setIsPosting(true);
       createPost.mutate({ content });
     }
   };
@@ -49,7 +63,7 @@ export default function CreatePost() {
           rows={2}
           maxLength={280}
           className="w-full bg-transparent text-xl placeholder-neutral-500 focus:outline-none resize-none pt-1 min-h-[60px]"
-          disabled={createPost.isPending}
+          disabled={isPosting}
         />
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-neutral-800/50">
           <div className="flex gap-4" style={{ color: "rgb(29,155,240)" }}>
@@ -78,7 +92,7 @@ export default function CreatePost() {
             )}
             <button
               type="submit"
-              disabled={!content.trim() || createPost.isPending}
+              disabled={!content.trim() || isPosting}
               className="rounded-full px-4 py-1.5 font-bold text-white transition disabled:opacity-50"
               style={{ backgroundColor: "rgb(29,155,240)" }}
               onMouseEnter={(e) => {
@@ -93,6 +107,11 @@ export default function CreatePost() {
           </div>
         </div>
       </form>
+      {isPosting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+      )}
     </div>
   );
 }

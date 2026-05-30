@@ -1,3 +1,9 @@
+/**
+ * Type augmentation for next-auth.
+ * Extends the default User type with a `username` field
+ * and the Session.User type with `id` and `username` fields
+ * to match our custom User model in Prisma.
+ */
 import "next-auth";
 
 declare module "next-auth" {

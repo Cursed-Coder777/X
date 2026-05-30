@@ -1,3 +1,15 @@
+/**
+ * Client-side tRPC and React Query provider.
+ *
+ * Sets up:
+ * - Typed tRPC client (api) with httpBatchStreamLink for batching
+ * - LoggerLink for debugging in development
+ * - Singleton QueryClient on the client, fresh one on the server
+ * - Exports RouterInputs/RouterOutputs type helpers
+ *
+ * The TRPCReactProvider component wraps the app with QueryClientProvider
+ * and the tRPC Provider for useQuery/useMutation hooks.
+ */
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";

@@ -1,3 +1,11 @@
+/**
+ * Server-side tRPC caller for React Server Components.
+ *
+ * Uses `server-only` to ensure this code never runs on the client.
+ * Caches the context and query client per request using React's cache().
+ * Exports `api` for RSC queries and `HydrateClient` for prefetching data
+ * during SSR and hydrating it on the client.
+ */
 import "server-only";
 
 import { createHydrationHelpers } from "@trpc/react-query/rsc";

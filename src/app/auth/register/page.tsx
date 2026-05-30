@@ -1,8 +1,17 @@
+/**
+ * Registration page — create a new X Clone account.
+ * Collects name, email, username, and password.
+ * On successful signup via tRPC user.signup, automatically logs in
+ * with NextAuth credentials and redirects to home.
+ * Shows error messages from the API (e.g., duplicate user).
+ * Large X watermark on the right side (desktop only).
+ */
 "use client";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -11,6 +20,7 @@ export default function SignupPage() {
     username: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -86,15 +96,25 @@ export default function SignupPage() {
               required
               disabled={isLoading}
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
-              required
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full rounded-sm bg-transparent border border-neutral-700 focus:border-[rgb(29,155,240)] text-white px-3 py-3.5 pr-12 text-[17px] outline-none transition-colors placeholder:text-neutral-500"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button
               type="submit"
@@ -124,9 +144,9 @@ export default function SignupPage() {
 
           <p className="text-[15px] mt-2 text-center">
             Already have an account?{" "}
-            <Link href="/auth/login" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
+            <a href="/auth/login" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
               Sign in
-            </Link>
+            </a>
           </p>
         </div>
       </div>

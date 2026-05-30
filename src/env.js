@@ -1,3 +1,8 @@
+/**
+ * Environment variable validation using Zod and @t3-oss/env-nextjs.
+ * Ensures all required env vars (AUTH_SECRET, DATABASE_URL, etc.) are present
+ * and correctly typed at build/start time. Fails fast if validation fails.
+ */
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 

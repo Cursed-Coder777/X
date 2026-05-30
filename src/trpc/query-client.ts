@@ -1,3 +1,10 @@
+/**
+ * React Query client factory for the X Clone.
+ * Configures a QueryClient with:
+ * - 30-second stale time (avoids refetching immediately on client after SSR)
+ * - SuperJSON serialization/deserialization for tRPC compatibility
+ * - Custom dehydrate logic that includes pending queries
+ */
 import {
   defaultShouldDehydrateQuery,
   QueryClient,

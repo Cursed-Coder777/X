@@ -1,3 +1,11 @@
+/**
+ * Global stylesheet for the X Clone project.
+ * Imports Tailwind CSS v4 and defines custom theme values:
+ * - --font-sans: Geist font with fallbacks
+ * - --color-x-blue: X/Twitter brand blue (#1d9bf0)
+ *
+ * Sets default black background and white text for the X-like dark theme.
+ */
 @import "tailwindcss";
 
 @theme {

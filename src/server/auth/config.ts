@@ -1,3 +1,15 @@
+/**
+ * NextAuth configuration for the X Clone.
+ *
+ * Authentication strategy:
+ * - Uses PrismaAdapter to persist sessions/users via the database
+ * - Credentials provider: email + password login with bcrypt verification
+ * - JWT session strategy (no database sessions)
+ * - Custom JWT/session callbacks inject user id and username into the token
+ *
+ * The authorize function validates credentials with Zod,
+ * looks up the user by email, and compares the hashed password.
+ */
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
@@ -38,6 +50,7 @@ export const authConfig = {
   pages: { signIn: "/auth/signin" },
   secret: process.env.AUTH_SECRET,
   callbacks: {
+    // Add custom fields to the JWT token when a user signs in
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -45,6 +58,7 @@ export const authConfig = {
       }
       return token;
     },
+    // Extract custom fields from the token into the session object
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;

@@ -1,3 +1,9 @@
+/**
+ * Prisma client singleton.
+ * Creates a single PrismaClient instance and caches it on globalThis
+ * in development to avoid exhausting connections during hot reloads.
+ * Logs queries in development mode, only errors in production.
+ */
 import { env } from "~/env";
 import { PrismaClient } from "../../generated/prisma";
 

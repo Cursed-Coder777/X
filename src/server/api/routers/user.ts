@@ -1,3 +1,18 @@
+/**
+ * User router — handles user accounts, profiles, and social interactions.
+ *
+ * Endpoints:
+ * - signup (public): Register a new user with name, email, username, password
+ * - getByUsername: Get user profile data (post/follower/following counts)
+ * - isFollowing: Check if current user follows a target user
+ * - toggleFollow: Follow or unfollow a user (toggle, prevents self-follow)
+ * - getUserPosts: Get a user's posts for their profile page
+ * - getFollowers: List users who follow a given user
+ * - getFollowing: List users a given user follows
+ *
+ * Signup is public; all other endpoints require authentication.
+ * Passwords are hashed with bcrypt. Duplicate email/username returns CONFLICT.
+ */
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
@@ -111,14 +126,18 @@ export const userRouter = createTRPCRouter({
         include: {
           author: { select: { name: true, username: true, image: true } },
           likes: { where: { userId: ctx.session.user.id }, select: { userId: true } },
-          _count: { select: { likes: true } },
+          bookmarks: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+          _count: { select: { likes: true, comments: true } },
         },
       });
       return posts.map((post) => ({
         ...post,
         likedByUser: post.likes.length > 0,
+        bookmarkedByUser: post.bookmarks.length > 0,
         likeCount: post._count.likes,
+        commentCount: post._count.comments,
         likes: undefined,
+        bookmarks: undefined,
         _count: undefined,
       }));
     }),

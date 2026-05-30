@@ -1,3 +1,10 @@
+/**
+ * tRPC HTTP API route handler.
+ * Uses fetchRequestHandler from @trpc/server to process all tRPC requests
+ * at /api/trpc/{path}. Creates context from the incoming request headers
+ * and logs errors in development mode.
+ * Handles both GET (queries) and POST (mutations) requests.
+ */
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { type NextRequest } from "next/server";
 

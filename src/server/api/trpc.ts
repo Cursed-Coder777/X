@@ -1,10 +1,13 @@
 /**
- * YOU PROBABLY DON'T NEED TO EDIT THIS FILE, UNLESS:
- * 1. You want to modify request context (see Part 1).
- * 2. You want to create a new middleware or type of procedure (see Part 3).
+ * tRPC server core setup.
  *
- * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
- * need to use are documented accordingly near the end.
+ * This file bootstraps the tRPC API:
+ * 1. CONTEXT: Creates the request context including database and auth session
+ * 2. INITIALIZATION: Sets up the tRPC instance with SuperJSON transformer and Zod error formatting
+ * 3. PROCEDURES: Defines publicProcedure (no auth required) and protectedProcedure (auth required)
+ *
+ * The timingMiddleware adds artificial latency in development to simulate production network delays
+ * and logs execution time for each procedure call.
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";

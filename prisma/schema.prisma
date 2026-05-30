@@ -1,3 +1,20 @@
+// Prisma schema for the X Clone project.
+// Uses SQLite as the database provider.
+//
+// Models:
+//   User            - Core user accounts with credentials (name, email, username, password, bio)
+//   Post            - User posts with content (max 280 chars), optional image
+//   Like            - Many-to-many likes between users and posts (unique per user+post)
+//   Bookmark        - Many-to-many bookmarks between users and posts (unique per user+post)
+//   Repost          - Many-to-many reposts between users and posts (unique per user+post)
+//   Comment         - Replies to posts (many-to-one with both User and Post)
+//   Follow          - Self-referential follow relationships between users
+//   Account/Session - NextAuth required models for session persistence
+//   VerificationToken - NextAuth model for email verification
+//   Conversation    - Direct messaging between two users
+//   ConversationParticipant - Links users to conversations
+//   Message         - Individual messages within a conversation
+
 generator client {
     provider = "prisma-client-js"
     output   = "../generated/prisma"
@@ -23,11 +40,14 @@ model User {
     posts     Post[]
     likes     Like[]
     bookmarks Bookmark[]
+    reposts   Repost[]
     comments  Comment[]
     following Follow[] @relation("following")
     followers Follow[] @relation("followers")
     accounts  Account[]   // ✅ opposite for Account.user
     sessions  Session[]   // ✅ opposite for Session.user
+    conversations ConversationParticipant[]
+    sentMessages  Message[]
 }
 
 model Post {
@@ -41,6 +61,7 @@ model Post {
 
     likes     Like[]
     bookmarks Bookmark[]
+    reposts   Repost[]
     comments  Comment[]
 }
 
@@ -57,6 +78,18 @@ model Like {
 }
 
 model Bookmark {
+    id        String   @id @default(cuid())
+    userId    String
+    postId    String
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, postId])
+}
+
+model Repost {
     id        String   @id @default(cuid())
     userId    String
     postId    String
@@ -124,4 +157,33 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model Conversation {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+
+    participants ConversationParticipant[]
+    messages     Message[]
+}
+
+model ConversationParticipant {
+    id             String       @id @default(cuid())
+    userId         String
+    conversationId String
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, conversationId])
+}
+
+model Message {
+    id             String   @id @default(cuid())
+    content        String
+    senderId       String
+    conversationId String
+    createdAt      DateTime @default(now())
+
+    sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+    conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }

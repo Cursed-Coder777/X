@@ -1,3 +1,16 @@
+/**
+ * Sidebar — left-hand navigation sidebar (X/Twitter style).
+ * Navigation items: Home, Explore, Notifications, Messages, Bookmarks, Profile.
+ * Active state is determined by pathname matching.
+ *
+ * Layout:
+ * - X logo at the top
+ * - Nav links with icons (icon-only on narrow, icon+label on wide via xl: breakpoint)
+ * - "Post" button (full-width on desktop, icon-only on mobile)
+ * - Account pill at the bottom linking to the user's own profile
+ *
+ * Responsive: 88px collapsed, 275px expanded (xl breakpoint).
+ */
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

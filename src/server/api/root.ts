@@ -1,4 +1,12 @@
+/**
+ * tRPC app router root.
+ * Combines all sub-routers (post, user, comment, conversation) into a single
+ * AppRouter that is served at /api/trpc. Also exports the type for type-safe
+ * client usage and a server-side caller factory for RSC.
+ */
 import { postRouter } from "~/server/api/routers/post";
+import { commentRouter } from "~/server/api/routers/comment";
+import { conversationRouter } from "~/server/api/routers/conversation";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { userRouter } from "./routers/user";
 /**
@@ -9,8 +17,8 @@ import { userRouter } from "./routers/user";
 export const appRouter = createTRPCRouter({
   post: postRouter,
   user: userRouter,
-  
-
+  comment: commentRouter,
+  conversation: conversationRouter,
 });
 
 // export type definition of API

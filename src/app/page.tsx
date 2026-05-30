@@ -1,3 +1,13 @@
+/**
+ * Home page — the main feed.
+ * Features:
+ * - "For You" tab: shows all posts
+ * - "Following" tab: shows posts only from followed users
+ * - Sticky tab header with active indicator
+ * - CreatePost composer at the top
+ * - PostCard list rendered from tRPC getFeed query
+ * - Requires authentication (AuthGuard)
+ */
 "use client";
 import { useState } from "react";
 import AuthGuard from "~/app/_components/AuthGuard";
