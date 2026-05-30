@@ -10,11 +10,17 @@
  * and logs execution time for each procedure call.
  */
 
+// tRPC init function and error class for creating the API instance
 import { initTRPC, TRPCError } from "@trpc/server";
+// SuperJSON — handles Date, Map, Set etc. serialization so they survive
+// the network round-trip without data loss
 import superjson from "superjson";
+// Zod error class — used in the errorFormatter to surface validation errors
 import { ZodError } from "zod";
 
+// NextAuth session helper — reads the current user's session from the cookie
 import { auth } from "~/server/auth";
+// Prisma database client singleton
 import { db } from "~/server/db";
 
 /**
@@ -30,12 +36,13 @@ import { db } from "~/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  // Resolve the NextAuth session for every request
   const session = await auth();
 
   return {
-    db,
-    session,
-    ...opts,
+    db,          // Prisma client — accessible as ctx.db in every procedure
+    session,     // NextAuth session object — accessible as ctx.session
+    ...opts,     // Spread incoming options (headers, etc.)
   };
 };
 
@@ -47,7 +54,10 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
  * errors on the backend.
  */
 const t = initTRPC.context<typeof createTRPCContext>().create({
+  // SuperJSON handles serialization of complex types (Date, Map, Set)
   transformer: superjson,
+  // Custom error formatter that extracts Zod validation errors into a
+  // structured shape the frontend can display field-level errors
   errorFormatter({ shape, error }) {
     return {
       ...shape,
@@ -91,7 +101,8 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
   if (t._config.isDev) {
-    // artificial delay in dev
+    // Add a random delay between 100–500 ms in development to mimic real
+    // network conditions and surface latent waterfall issues early
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
@@ -99,6 +110,7 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
   const result = await next();
 
   const end = Date.now();
+  // Log procedure execution time for debugging
   console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
 
   return result;
@@ -129,7 +141,8 @@ export const protectedProcedure = t.procedure
     }
     return next({
       ctx: {
-        // infers the `session` as non-nullable
+        // Narrow the type so downstream procedures see session.user as
+        // non-nullable, avoiding repeated null checks
         session: { ...ctx.session, user: ctx.session.user },
       },
     });

@@ -6,19 +6,29 @@
  * Shows loading, empty, and error states.
  */
 "use client";
+
+// Local state for the reply input
 import { useState } from "react";
+// tRPC client for queries and mutations
 import { api } from "~/trpc/react";
+// Individual comment card component
 import CommentCard from "./CommentCard";
 
 export default function CommentSection({ postId }: { postId: string }) {
+  // tRPC utility bag for cache invalidation
   const utils = api.useUtils();
+  // Controlled reply input value
   const [content, setContent] = useState("");
 
+  // Query: fetch all comments for this post
   const { data: comments, isLoading } = api.comment.getByPost.useQuery({ postId });
 
+  // Mutation: create a new comment
   const createComment = api.comment.create.useMutation({
     onSuccess: async () => {
+      // Clear the input after a successful reply
       setContent("");
+      // Invalidate comment and post caches so the UI reflects the new reply
       await Promise.all([
         utils.comment.getByPost.invalidate({ postId }),
         utils.post.getFeed.invalidate(),
@@ -30,6 +40,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     },
   });
 
+  // Submit the reply form
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
@@ -39,7 +50,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
   return (
     <div className="border-t border-neutral-800">
-      {/* Comment input */}
+      {/* Comment input row */}
       <form onSubmit={handleSubmit} className="flex gap-3 px-4 py-3">
         <input
           value={content}
@@ -58,7 +69,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         </button>
       </form>
 
-      {/* Comments list */}
+      {/* Comments list — loading, items, or empty state */}
       {isLoading && <div className="px-4 py-3 text-sm text-neutral-500">Loading replies...</div>}
       {comments?.map((comment) => (
         <CommentCard key={comment.id} {...comment} />

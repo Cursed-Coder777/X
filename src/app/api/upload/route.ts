@@ -26,66 +26,88 @@
  *
  * @returns JSON { url: string }
  */
+
+// NextRequest and NextResponse are the standard fetch-based request/response types in Next.js App Router
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+// writeFile and mkdir are Node.js promise-based filesystem functions for local storage
 import { writeFile, mkdir } from "fs/promises";
+// path is used to construct safe filesystem paths (avoids string concatenation)
 import path from "path";
+// uuid v4 generates unique, unpredictable file names to prevent collisions and traversal attacks
 import { v4 as uuid } from "uuid";
+// put is the Vercel Blob SDK function that uploads a file to the cloud blob store
 import { put } from "@vercel/blob";
+// auth retrieves the current session to enforce authentication
 import { auth } from "~/server/auth";
+// env provides validated environment variables including BLOB_READ_WRITE_TOKEN
 import { env } from "~/env";
 
+// POST handler — only method supported; uploads are always a form submission
 export async function POST(req: NextRequest) {
-  // --- AUTH CHECK ---
-  // Only logged-in users can upload. Same guard as all other protected routes.
+  // ========================
+  // AUTH CHECK
+  // ========================
+  // Only logged-in users can upload. Returns 401 if no valid session exists.
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // --- PARSE THE UPLOADED FILE ---
-  // The client sends a multipart/form-data with a "file" field (see CreatePost.tsx / EditProfileModal.tsx)
+  // ========================
+  // PARSE THE UPLOADED FILE
+  // ========================
+  // The client sends a multipart/form-data with a "file" field
+  // (see CreatePost.tsx / EditProfileModal.tsx for the client side)
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // --- VALIDATE FILE TYPE ---
-  // Only allow common image formats. Browsers set the MIME type automatically.
+  // ========================
+  // VALIDATE FILE TYPE
+  // ========================
+  // Only allow common image formats. The browser sets the MIME type automatically.
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
     return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
   }
 
-  // --- VALIDATE FILE SIZE ---
-  // 5 MB limit. Vercel Blob free tier allows up to 5 MB per file anyway.
+  // ========================
+  // VALIDATE FILE SIZE
+  // ========================
+  // 5 MB limit. Vercel Blob free tier permits up to 5 MB per file anyway.
   if (file.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
   }
 
-  // --- GENERATE A UNIQUE FILENAME ---
+  // ========================
+  // GENERATE UNIQUE FILENAME
+  // ========================
   // UUID prevents name collisions and path-traversal attacks.
   const ext = file.name.split(".").pop() ?? "jpg";
   const filename = `${uuid()}.${ext}`;
 
-  // --- DECIDE STORAGE BACKEND ---
-  // If BLOB_READ_WRITE_TOKEN exists → Vercel Blob (production-like)
-  // Otherwise → local filesystem (dev only)
+  // ========================
+  // DECIDE STORAGE BACKEND
+  // ========================
+  // If BLOB_READ_WRITE_TOKEN is set → Vercel Blob (production-like).
+  // Otherwise → local filesystem (dev-only fallback).
   if (env.BLOB_READ_WRITE_TOKEN) {
-    // ======================
-    // PATH A: VERCEL BLOB
-    // ======================
+    // ============================
+    // PATH A: VERCEL BLOB (CLOUD)
+    // ============================
     //
     // put() uploads the file directly to Vercel Blob storage.
     // We pass the File object directly (not a Buffer) so it streams
-    // the upload without loading the entire file into memory.
-    // - addRandomSuffix: false — we already use UUID, no need for extra hash
-    // - access: "public" — makes the URL publicly accessible
-    // - The returned `url` is a full CDN URL like:
-    //   https://<store-id>.public.blob.vercel-storage.com/uuid.jpg
+    // without loading the entire file into memory.
+    //   - addRandomSuffix: false — our UUID already provides uniqueness
+    //   - access: "public" — the returned URL is publicly accessible
+    //   - contentType: passed explicitly so the CDN sets the correct MIME type
     //
-    // To view uploaded images: Vercel Dashboard → Storage → Blob → click your store
+    // The returned `url` is a full CDN URL like:
+    //   https://<store-id>.public.blob.vercel-storage.com/uuid.jpg
     try {
       const blob = await put(filename, file, {
         access: "public",
@@ -102,26 +124,28 @@ export async function POST(req: NextRequest) {
       );
     }
   } else {
-    // ======================
-    // PATH B: LOCAL FILESYSTEM (dev fallback)
-    // ======================
+    // ============================
+    // PATH B: LOCAL FILESYSTEM (DEV FALLBACK)
+    // ============================
     //
-    // This runs when there's no BLOB_READ_WRITE_TOKEN (usually local dev).
+    // Runs when there is no BLOB_READ_WRITE_TOKEN (usually local dev).
     // Files are saved to ./uploads/ and served via the proxy route at /api/uploads/[key].
     //
     // Why not use Blob all the time?
-    //   So you don't need to set up a Vercel Blob store just to run the app locally.
+    //   So you don't need a Vercel Blob store just to run the app locally.
     //
     // Will this work on Vercel?
     //   NO. Vercel serverless functions have an ephemeral filesystem —
     //   files written here will disappear after the request ends.
     //   That's why we use Blob when deployed.
     const dir = path.join(process.cwd(), "uploads");
+    // Ensure the uploads directory exists (creates it recursively if needed)
     await mkdir(dir, { recursive: true });
+    // Convert the File to a Buffer so we can write it to disk
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(path.join(dir, filename), buffer);
 
-    // Return a relative URL — the frontend will prepend the origin automatically
+    // Return a relative URL — the frontend prepends the origin automatically
     return NextResponse.json({ url: `/api/uploads/${filename}` });
   }
 }

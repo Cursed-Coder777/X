@@ -6,11 +6,17 @@
  * Closes on backdrop click or X button. Shows character count.
  */
 "use client";
+
+// Local state for the reply textarea
 import { useState } from "react";
+// tRPC client for the comment.create mutation
 import { api } from "~/trpc/react";
+// UI icons: user fallback, loading spinner, close button
 import { User, Loader2, X } from "lucide-react";
+// Next.js optimized image for the author avatar
 import Image from "next/image";
 
+// Props: the original post's metadata and a close handler
 interface ReplyModalProps {
   postId: string;
   authorName: string | null;
@@ -28,17 +34,23 @@ export default function ReplyModal({
   postContent,
   onClose,
 }: ReplyModalProps) {
+  // Controlled reply text
   const [content, setContent] = useState("");
+  // tRPC utility bag for cache invalidation
   const utils = api.useUtils();
 
+  // Mutation: create a new comment (reply)
   const createComment = api.comment.create.useMutation({
     onSuccess: async () => {
+      // Clear the input
       setContent("");
+      // Invalidate comment and post caches so the UI refreshes
       await Promise.all([
         utils.comment.getByPost.invalidate({ postId }),
         utils.post.getFeed.invalidate(),
         utils.post.getAll.invalidate(),
       ]).catch(console.error);
+      // Close the modal
       onClose();
     },
     onError: (err) => {
@@ -46,6 +58,7 @@ export default function ReplyModal({
     },
   });
 
+  // Submit the reply
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
@@ -54,12 +67,14 @@ export default function ReplyModal({
   };
 
   return (
+    // Backdrop — clicking outside the modal card closes it
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
+      {/* Modal card */}
       <div className="bg-black border border-neutral-700 rounded-2xl w-full max-w-lg mx-4">
-        {/* Header */}
+        {/* Header row with close (X) button */}
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={onClose}
@@ -69,7 +84,7 @@ export default function ReplyModal({
           </button>
         </div>
 
-        {/* Original post context */}
+        {/* Original post context: avatar + name/username + content */}
         <div className="flex gap-3 px-4 pb-3">
           <div className="flex-shrink-0">
             {authorImage ? (
@@ -97,14 +112,14 @@ export default function ReplyModal({
           </div>
         </div>
 
-        {/* Replying to indicator */}
+        {/* "Replying to @username" label in X-blue */}
         <div className="px-4 pb-2">
           <span className="text-sm text-neutral-500">
             Replying to <span className="text-[rgb(29,155,240)]">@{authorUsername}</span>
           </span>
         </div>
 
-        {/* Reply input */}
+        {/* Reply textarea + character count + submit button */}
         <form onSubmit={handleSubmit} className="px-4 pb-4">
           <textarea
             value={content}

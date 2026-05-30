@@ -1,7 +1,19 @@
+/**
+ * MobileDrawer — slide-in navigation drawer for small screens (< lg breakpoint).
+ * Contains the X logo, nav links (Home, Explore, Notifications, Messages,
+ * Bookmarks, Profile), a Post button, and the current user account pill.
+ * Badges on Messages and Notifications show unread counts (polled every 15 s).
+ * Animated with Framer Motion (spring drawer + staggered item fade-in).
+ */
 "use client";
+
+// Link component for client-side navigation
 import Link from "next/link";
+// Hooks to read the current pathname and imperatively navigate
 import { usePathname, useRouter } from "next/navigation";
+// Session data for user-aware links and the account pill
 import { useSession } from "next-auth/react";
+// Icons for every nav item + close button
 import {
   Home,
   Search,
@@ -13,14 +25,18 @@ import {
   Feather,
   X,
 } from "lucide-react";
+// tRPC client for unread conversation/notification counts
 import { api } from "~/trpc/react";
+// Framer Motion for enter/exit animations
 import { motion } from "framer-motion";
 
+// Backdrop: fade in/out
 const backdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
 } as const;
 
+// Drawer panel: slides in/out from the left with a spring animation
 const drawerVariants = {
   hidden: { x: "-100%" },
   visible: {
@@ -30,6 +46,7 @@ const drawerVariants = {
   exit: { x: "-100%", transition: { type: "spring" as const, damping: 30, stiffness: 300 } },
 };
 
+// Individual nav item: fades in and slides right
 const itemVariants = {
   hidden: { opacity: 0, x: -20 },
   visible: { opacity: 1, x: 0 },
@@ -39,18 +56,23 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+
+  // Poll unread conversation count every 15 seconds (only when logged in)
   const { data: conversations } = api.conversation.getConversations.useQuery(undefined, {
     enabled: !!session,
     refetchInterval: 15000,
   });
+  // Poll unread notification count every 15 seconds
   const { data: unreadNotifications } = api.notification.getUnreadCount.useQuery(undefined, {
     enabled: !!session,
     refetchInterval: 15000,
   });
 
+  // Derive the profile href from the session (username or email local-part)
   const username = session?.user?.username ?? session?.user?.email?.split("@")[0] ?? "";
   const profileHref = username ? `/profile/${username}` : "/profile";
 
+  // Navigation item definitions
   const navItems = [
     { icon: Home, label: "Home", href: "/" },
     { icon: Search, label: "Explore", href: "/search" },
@@ -60,11 +82,13 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
     { icon: User, label: "Profile", href: profileHref },
   ];
 
+  // Sum unread counts across all conversations
   const totalUnread = conversations?.reduce((sum, c) => sum + c.unreadCount, 0) ?? 0;
   const unreadNotifCount = unreadNotifications ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
+      {/* Animated semi-transparent backdrop */}
       <motion.div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         variants={backdropVariants}
@@ -73,6 +97,8 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
         exit="hidden"
         onClick={onClose}
       />
+
+      {/* Animated drawer panel */}
       <motion.aside
         className="absolute left-0 top-0 h-full w-[280px] bg-black border-r border-neutral-800 flex flex-col py-2"
         variants={drawerVariants}
@@ -80,6 +106,7 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
         animate="visible"
         exit="exit"
       >
+        {/* X logo + close button */}
         <div className="flex items-center justify-between px-4 py-2 mb-2">
           <Link href="/" onClick={onClose}>
             <svg viewBox="0 0 24 24" className="h-7 w-7 fill-white" aria-label="X">
@@ -91,8 +118,10 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Navigation links */}
         <nav className="flex flex-col gap-1 px-2">
           {navItems.map(({ icon: Icon, label, href }) => {
+            // Determine active state: exact match or path prefix for Profile/Explore
             const isActive =
               pathname === href ||
               (label === "Profile" && pathname.startsWith("/profile/")) ||
@@ -106,11 +135,13 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
                 >
                   <span className="relative flex-shrink-0">
                     <Icon size={26} strokeWidth={isActive ? 2.5 : 1.75} />
+                    {/* Unread message badge */}
                     {label === "Messages" && totalUnread > 0 && (
                       <span className="absolute -top-1 -right-1 bg-[rgb(29,155,240)] text-white text-[11px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                         {totalUnread > 99 ? "99+" : totalUnread}
                       </span>
                     )}
+                    {/* Unread notification badge */}
                     {label === "Notifications" && unreadNotifCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-[rgb(29,155,240)] text-white text-[11px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                         {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
@@ -126,6 +157,7 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
           })}
         </nav>
 
+        {/* Post button (navigates to /compose) */}
         <div className="mt-4 px-2">
           <motion.div variants={itemVariants}>
             <button
@@ -141,6 +173,7 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
           </motion.div>
         </div>
 
+        {/* Current user account pill at the bottom */}
         {session?.user && (
           <motion.div className="mt-auto mb-3 px-2" variants={itemVariants}>
             <Link

@@ -15,12 +15,21 @@
  *
  * Signup is public; all others require authentication.
  */
+
+// Zod runtime validation library — provides schema-based input validation
 import { z } from "zod";
+// Router factory, auth-guarded procedure, and public procedure from the shared tRPC setup
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+// tRPC error class for throwing typed errors (CONFLICT, NOT_FOUND, BAD_REQUEST)
 import { TRPCError } from "@trpc/server";
+// bcrypt for hashing passwords before storing them in the database
 import bcrypt from "bcrypt";
 
+// Export a single router that groups all user-related procedures under the "user" namespace
 export const userRouter = createTRPCRouter({
+  // ── signup ─────────────────────────────────────────────────────────────
+  // Public (no auth required).  Creates a new user account.  Validates that
+  // the email and username are unique — throws CONFLICT if either is taken.
   signup: publicProcedure
     .input(z.object({
       name: z.string().min(1),
@@ -29,13 +38,16 @@ export const userRouter = createTRPCRouter({
       password: z.string().min(6),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Check for existing user with the same email or username
       const exists = await ctx.db.user.findFirst({
         where: { OR: [{ email: input.email }, { username: input.username }] },
       });
       if (exists) {
         throw new TRPCError({ code: "CONFLICT", message: "User already exists." });
       }
+      // Hash the password with a salt round of 10
       const hashedPassword = await bcrypt.hash(input.password, 10);
+      // Persist the new user
       const user = await ctx.db.user.create({
         data: {
           name: input.name,
@@ -44,10 +56,14 @@ export const userRouter = createTRPCRouter({
           password: hashedPassword,
         },
       });
+      // Return a safe subset — never expose the password hash
       return { id: user.id, email: user.email, username: user.username };
     }),
 
-  // Get user by username (for profile page)
+  // ── getByUsername ──────────────────────────────────────────────────────
+  // Fetch a user's public profile by their unique username.  Includes
+  // follower / following / post counts.  Throws NOT_FOUND if the username
+  // does not exist.
   getByUsername: protectedProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -71,7 +87,9 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  // Check if current user follows a target user
+  // ── isFollowing ────────────────────────────────────────────────────────
+  // Check whether the current user follows a given target user.  Returns
+  // a simple boolean { isFollowing }.
   isFollowing: protectedProcedure
     .input(z.object({ targetUserId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -86,17 +104,22 @@ export const userRouter = createTRPCRouter({
       return { isFollowing: !!follow };
     }),
 
-  // Toggle follow/unfollow
+  // ── toggleFollow ───────────────────────────────────────────────────────
+  // Follow or unfollow a user (idempotent toggle).  Prevents self-follow
+  // with a BAD_REQUEST error.  When following, creates a FOLLOW notification
+  // for the target user.
   toggleFollow: protectedProcedure
     .input(z.object({ targetUserId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { targetUserId } = input;
       const currentUserId = ctx.session.user.id;
 
+      // Reject self-follow attempts
       if (currentUserId === targetUserId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot follow yourself" });
       }
 
+      // Check for an existing follow relationship
       const existing = await ctx.db.follow.findUnique({
         where: {
           followerId_followingId: {
@@ -107,9 +130,11 @@ export const userRouter = createTRPCRouter({
       });
 
       if (existing) {
+        // Unfollow
         await ctx.db.follow.delete({ where: { id: existing.id } });
         return { following: false };
       } else {
+        // Follow — create the relationship and a notification
         await ctx.db.follow.create({
           data: { followerId: currentUserId, followingId: targetUserId },
         });
@@ -124,7 +149,9 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  // Get user's posts (for profile page)
+  // ── getUserPosts ───────────────────────────────────────────────────────
+  // Fetch a specific user's posts (newest first) for their profile page.
+  // Each post includes the current user's like / bookmark state.
   getUserPosts: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -138,6 +165,7 @@ export const userRouter = createTRPCRouter({
           _count: { select: { likes: true, comments: true } },
         },
       });
+      // Flatten relational arrays into boolean flags and lift counts
       return posts.map((post) => ({
         ...post,
         likedByUser: post.likes.length > 0,
@@ -150,7 +178,9 @@ export const userRouter = createTRPCRouter({
       }));
     }),
 
-  // Update own profile (name, bio, image, bannerUrl)
+  // ── updateProfile ──────────────────────────────────────────────────────
+  // Update the current user's profile fields (name, bio, image, bannerUrl).
+  // Only the authenticated user's own record can be modified.
   updateProfile: protectedProcedure
     .input(z.object({
       name: z.string().min(1).max(50),
@@ -159,6 +189,8 @@ export const userRouter = createTRPCRouter({
       bannerUrl: z.string().optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Spread only the fields that were actually provided so undefined
+      // values do not accidentally clear existing data.
       const user = await ctx.db.user.update({
         where: { id: ctx.session.user.id },
         data: {
@@ -171,6 +203,9 @@ export const userRouter = createTRPCRouter({
       return { id: user.id, name: user.name, bio: user.bio, image: user.image, bannerUrl: user.bannerUrl };
     }),
 
+  // ── search ─────────────────────────────────────────────────────────────
+  // Search users by name or username (case-insensitive contains).
+  // Returns up to 10 results, excluding the current user.
   search: protectedProcedure
     .input(z.object({ query: z.string().min(1).max(50) }))
     .query(async ({ ctx, input }) => {
@@ -184,17 +219,24 @@ export const userRouter = createTRPCRouter({
         select: { id: true, name: true, username: true, image: true },
         take: 10,
       });
+      // Exclude the current user from results
       return users.filter((u) => u.id !== ctx.session.user.id);
     }),
 
+  // ── getSuggestions ─────────────────────────────────────────────────────
+  // "Who to Follow" widget: returns up to 3 users that the current user
+  // is not already following.  Excludes the current user themselves.
   getSuggestions: protectedProcedure.query(async ({ ctx }) => {
+    // Fetch all user IDs the current user follows
     const following = await ctx.db.follow.findMany({
       where: { followerId: ctx.session.user.id },
       select: { followingId: true },
     });
     const followingIds = new Set(following.map((f) => f.followingId));
+    // Also exclude self
     followingIds.add(ctx.session.user.id);
 
+    // Pick up to 3 random-ish users (no orderBy, so effectively arbitrary)
     const suggestions = await ctx.db.user.findMany({
       where: { id: { notIn: Array.from(followingIds) } },
       select: { id: true, name: true, username: true, image: true, bio: true },
@@ -203,7 +245,8 @@ export const userRouter = createTRPCRouter({
     return suggestions;
   }),
 
-  // Get follower/following lists (optional)
+  // ── getFollowers ───────────────────────────────────────────────────────
+  // Return the list of users who follow the given user.
   getFollowers: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -211,9 +254,12 @@ export const userRouter = createTRPCRouter({
         where: { followingId: input.userId },
         include: { follower: { select: { id: true, name: true, username: true, image: true } } },
       });
+      // Unwrap the relation to return a flat array of user objects
       return followers.map((f) => f.follower);
     }),
 
+  // ── getFollowing ───────────────────────────────────────────────────────
+  // Return the list of users that the given user follows.
   getFollowing: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ ctx, input }) => {

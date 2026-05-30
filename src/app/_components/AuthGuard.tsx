@@ -5,20 +5,27 @@
  * Renders children only when a valid session exists.
  */
 "use client";
+
+// Session hook to check authentication status
 import { useSession } from "next-auth/react";
+// Router for redirecting unauthenticated users
 import { useRouter } from "next/navigation";
+// Effect hook to perform the redirect
 import { useEffect } from "react";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  // status is "loading" | "authenticated" | "unauthenticated"
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // Redirect to login page when the session is confirmed absent
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
     }
   }, [status, router]);
 
+  // While the session is being loaded, show a centered X logo (pulsing)
   if (status === "loading") {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -29,5 +36,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Render children only when we have a valid session
   return session ? <>{children}</> : null;
 }

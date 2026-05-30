@@ -9,20 +9,31 @@
  * Search input has X-blue focus ring. Trends/suggestions fetched via tRPC.
  */
 "use client";
+
+// Local state for the search input and a ref to the input element
 import { useState, useRef } from "react";
+// Router for programmatic navigation on search + trend/follow clicks
 import { useRouter } from "next/navigation";
+// tRPC client for trending and suggestion queries + follow mutation
 import { api } from "~/trpc/react";
+// Icons: search magnifier, loading spinner, fallback user avatar
 import { Search, Loader2, User } from "lucide-react";
 
 export default function RightSidebar() {
   const router = useRouter();
+  // Controlled search query value
   const [query, setQuery] = useState("");
+  // Ref to the input — useful for focus management if needed
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Query: top trending hashtags
   const { data: trending, isLoading: trendingLoading } = api.post.getTrending.useQuery();
+  // Query: suggested users to follow
   const { data: suggestions } = api.user.getSuggestions.useQuery();
+  // Mutation: toggle follow on a user
   const toggleFollow = api.user.toggleFollow.useMutation();
 
+  // Navigate to the search results page on form submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
@@ -32,7 +43,7 @@ export default function RightSidebar() {
 
   return (
     <aside className="w-[300px] xl:w-[350px] hidden lg:flex flex-col gap-4 px-4 xl:px-6 py-3 h-screen sticky top-0 overflow-y-auto">
-      {/* Search bar */}
+      {/* Search bar — sticky at top */}
       <form onSubmit={handleSearch} className="sticky top-0 pt-1 pb-2 bg-black z-10">
         <div className="relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" />
@@ -46,14 +57,16 @@ export default function RightSidebar() {
         </div>
       </form>
 
-      {/* Trending */}
+      {/* Trends for you card */}
       <div className="bg-black border border-neutral-800 rounded-2xl overflow-hidden">
         <h2 className="font-bold text-xl px-4 pt-4 pb-2">Trends for you</h2>
+        {/* Loading spinner */}
         {trendingLoading && (
           <div className="flex justify-center py-6">
             <Loader2 className="animate-spin text-neutral-500" size={20} />
           </div>
         )}
+        {/* Trend items — clicking navigates to the hashtag search */}
         {trending?.map(({ hashtag, count }) => (
           <button
             key={hashtag}
@@ -66,16 +79,18 @@ export default function RightSidebar() {
             </div>
           </button>
         ))}
+        {/* Empty state */}
         {trending?.length === 0 && (
           <p className="px-4 py-6 text-neutral-500 text-sm">No trends yet</p>
         )}
       </div>
 
-      {/* Who to follow */}
+      {/* Who to follow card */}
       <div className="bg-black border border-neutral-800 rounded-2xl overflow-hidden">
         <h2 className="font-bold text-xl px-4 pt-4 pb-2">Who to follow</h2>
         {suggestions?.map((s) => (
           <div key={s.id} className="flex items-center justify-between px-4 py-3 hover:bg-neutral-800 transition-colors">
+            {/* User info — clicking navigates to their profile */}
             <button
               onClick={() => router.push(`/profile/${s.username}`)}
               className="flex items-center gap-3 flex-1 min-w-0"
@@ -92,6 +107,7 @@ export default function RightSidebar() {
                 <p className="text-neutral-500 text-[13px] truncate">@{s.username}</p>
               </div>
             </button>
+            {/* Follow / unfollow button */}
             <button
               onClick={() => toggleFollow.mutate({ targetUserId: s.id })}
               disabled={toggleFollow.isPending}
@@ -101,6 +117,7 @@ export default function RightSidebar() {
             </button>
           </div>
         ))}
+        {/* Empty state */}
         {suggestions?.length === 0 && (
           <p className="px-4 py-6 text-neutral-500 text-sm">No suggestions</p>
         )}

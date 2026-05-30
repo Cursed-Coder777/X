@@ -6,14 +6,29 @@
  * Shows error messages from the API (e.g., duplicate user).
  * Large X watermark on the right side (desktop only).
  */
+
 "use client";
+
+// ── React ────────────────────────────────────────────────────────────────────
 import { useState } from "react";
+
+// ── tRPC API ─────────────────────────────────────────────────────────────────
 import { api } from "~/trpc/react";
+
+// ── NextAuth Sign-In ─────────────────────────────────────────────────────────
 import { signIn } from "next-auth/react";
+
+// ── Next.js ──────────────────────────────────────────────────────────────────
 import Link from "next/link";
+
+// ── Icons ────────────────────────────────────────────────────────────────────
 import { Eye, EyeOff } from "lucide-react";
 
+/**
+ * SignupPage — renders the full registration form.
+ */
 export default function SignupPage() {
+  // ── Form State ──────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -24,7 +39,13 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // ── Signup Mutation ─────────────────────────────────────────────────────
   const signupMutation = api.user.signup.useMutation({
+    /**
+     * onSuccess — after a successful signup, automatically log in
+     * using the same credentials. Redirect to "/" on success,
+     * or to "/auth/login" as a fallback.
+     */
     onSuccess: async () => {
       setIsLoading(true);
       const res = await signIn("credentials", {
@@ -39,12 +60,20 @@ export default function SignupPage() {
         window.location.href = "/auth/login";
       }
     },
+    /**
+     * onError — display the error message from the server
+     * (e.g., "username already taken") and re-enable the form.
+     */
     onError: (err) => {
       setError(err.message);
       setIsLoading(false);
     },
   });
 
+  /**
+   * handleSubmit — prevents default form submission, clears previous errors,
+   * and triggers the signup mutation.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -54,7 +83,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex">
-      {/* Left: form area */}
+      {/* ── Left: Form Area ──────────────────────────────────────────────── */}
       <div className="flex flex-col items-center justify-center min-h-screen w-full lg:w-1/2">
         {/* X Logo */}
         <div className="mb-8">
@@ -67,8 +96,10 @@ export default function SignupPage() {
           Join X today.
         </h1>
 
+        {/* ── Registration Form ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-3 w-full max-w-[300px] px-4">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Name field */}
             <input
               type="text"
               placeholder="Name"
@@ -78,6 +109,8 @@ export default function SignupPage() {
               required
               disabled={isLoading}
             />
+
+            {/* Email field */}
             <input
               type="email"
               placeholder="Email"
@@ -87,6 +120,8 @@ export default function SignupPage() {
               required
               disabled={isLoading}
             />
+
+            {/* Username field */}
             <input
               type="text"
               placeholder="Username"
@@ -96,6 +131,8 @@ export default function SignupPage() {
               required
               disabled={isLoading}
             />
+
+            {/* Password field with show/hide toggle */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -115,7 +152,11 @@ export default function SignupPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+
+            {/* Error message */}
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            {/* Submit button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -125,6 +166,7 @@ export default function SignupPage() {
             </button>
           </form>
 
+          {/* ── OR Divider ───────────────────────────────────────────────── */}
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-neutral-800" />
@@ -134,6 +176,7 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Terms notice */}
           <p className="text-neutral-500 text-[13px] text-center">
             By signing up, you agree to our{" "}
             <Link href="#" className="underline">Terms of Service</Link>,{" "}
@@ -142,6 +185,7 @@ export default function SignupPage() {
             <Link href="#" className="underline">Cookie Use</Link>.
           </p>
 
+          {/* Link to login */}
           <p className="text-[15px] mt-2 text-center">
             Already have an account?{" "}
             <a href="/auth/login" className="font-bold hover:underline" style={{ color: "rgb(29,155,240)" }}>
@@ -151,7 +195,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Right: giant X watermark */}
+      {/* ── Right: Giant X Watermark (desktop only) ──────────────────────── */}
       <div className="hidden lg:flex flex-1 items-center justify-center">
         <svg
           viewBox="0 0 24 24"
