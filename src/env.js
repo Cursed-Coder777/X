@@ -30,6 +30,7 @@ export const env = createEnv({
      */
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
     BLOB_STORE_ID: z.string().optional(),
+    TURSO_AUTH_TOKEN: z.string().optional(),
   },
 
   /**
@@ -52,6 +53,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     BLOB_STORE_ID: process.env.BLOB_STORE_ID,
+    TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

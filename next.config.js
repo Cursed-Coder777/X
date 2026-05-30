@@ -6,8 +6,8 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
-  // bcrypt uses Node.js native modules and must run on the server
-  serverExternalPackages: ["bcrypt"],
+  // Native Node.js packages that must run on the server, not bundled
+  serverExternalPackages: ["bcrypt", "@prisma/adapter-libsql", "@libsql/client", "libsql"],
 };
 
 export default config;
