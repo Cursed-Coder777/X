@@ -8,7 +8,7 @@
  *
  * Actions:
  * - Reply: opens ReplyModal
- * - Repost: UI only (backend ready, need onClick wiring)
+ * - Repost: optimistic toggle with green fill + count
  * - Like: optimistic toggle with rollback
  * - Bookmark: optimistic toggle with rollback
  * - Views/Share: UI only (no backend)
@@ -34,6 +34,9 @@ interface PostCardProps {
   likeCount: number;
   commentCount?: number;
   bookmarkedByUser?: boolean;
+  repostedByUser?: boolean;
+  repostCount?: number;
+  repostedBy?: { name: string | null; username: string | null } | null;
 }
 
 function timeAgo(date: Date): string {
@@ -59,10 +62,15 @@ export default function PostCard({
   likeCount: initialCount,
   commentCount = 0,
   bookmarkedByUser: initialBookmarked = false,
+  repostedByUser: initialReposted = false,
+  repostCount: initialRepostCount = 0,
+  repostedBy = null,
 }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialCount);
   const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
+  const [isReposted, setIsReposted] = useState(initialReposted);
+  const [repostCount, setRepostCount] = useState(initialRepostCount);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const utils = api.useUtils();
   const toggleLike = api.post.toggleLike.useMutation({
@@ -100,6 +108,23 @@ export default function PostCard({
     },
   });
 
+  const toggleRepost = api.post.toggleRepost.useMutation({
+    onMutate: async () => {
+      await utils.post.getAll.cancel();
+      const newReposted = !isReposted;
+      setIsReposted(newReposted);
+      setRepostCount((c) => (newReposted ? c + 1 : c - 1));
+    },
+    onError: () => {
+      setIsReposted((prev) => !prev);
+      setRepostCount((prev) => (isReposted ? prev - 1 : prev + 1));
+    },
+    onSettled: () => {
+      void utils.post.getAll.invalidate().catch(console.error);
+      void utils.post.getFeed.invalidate().catch(console.error);
+    },
+  });
+
   const { data: session } = useSession();
   const deletePost = api.post.delete.useMutation({
     onSuccess: () => {
@@ -122,6 +147,11 @@ export default function PostCard({
   const handleLike = () => {
     if (toggleLike.isPending) return;
     toggleLike.mutate({ postId: id });
+  };
+
+  const handleRepost = () => {
+    if (toggleRepost.isPending) return;
+    toggleRepost.mutate({ postId: id });
   };
 
   const isOwnPost = session?.user?.id === author.id;
@@ -170,6 +200,14 @@ export default function PostCard({
       </div>
 
       <div className="flex flex-col flex-1 min-w-0">
+        {/* Reposted by label */}
+        {repostedBy && (
+          <div className="flex items-center gap-1 text-[13px] text-neutral-500 mb-1">
+            <Repeat2 size={14} className="text-green-500" />
+            <span>{repostedBy.name ?? repostedBy.username} reposted</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center gap-1 text-[15px]">
           <button
@@ -219,10 +257,23 @@ export default function PostCard({
           </button>
 
           {/* Repost — green on hover */}
-          <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(0,186,124)] cursor-pointer">
-            <span className="p-2 rounded-full group-hover:bg-[rgba(0,186,124,0.1)] transition-colors">
-              <Repeat2 size={18} strokeWidth={1.5} />
+          <button
+            onClick={(e) => { e.stopPropagation(); handleRepost(); }}
+            disabled={toggleRepost.isPending}
+            className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors cursor-pointer ${isReposted ? "text-[rgb(0,186,124)]" : "hover:text-[rgb(0,186,124)]"}`}
+          >
+            <span className={`p-2 rounded-full transition-colors ${isReposted ? "" : "group-hover:bg-[rgba(0,186,124,0.1)]"}`}>
+              <Repeat2
+                size={18}
+                strokeWidth={1.5}
+                className={isReposted ? "fill-[rgb(0,186,124)]" : ""}
+              />
             </span>
+            {repostCount > 0 && (
+              <span className={`text-sm -ml-1.5 ${isReposted ? "text-[rgb(0,186,124)]" : ""}`}>
+                {repostCount}
+              </span>
+            )}
           </button>
 
           {/* Like — pink on hover */}
