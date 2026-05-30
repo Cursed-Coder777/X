@@ -1,23 +1,9 @@
-/**
- * Messages page — direct messaging interface.
- * Layout: conversation list (left) + active chat view (right).
- * Uses URL search param `conversationId` for routing between conversations.
- *
- * Sub-components:
- * - NewMessageModal: User search + picker to start a new DM
- * - ConversationList: Lists conversations with unread badges, "New message" (+) button
- * - ChatView: Messages with auto-scroll, auto-mark-as-read, send input (Enter to send)
- *
- * Unread counts computed from lastReadAt on ConversationParticipant.
- * Messages poll every 2s. markAsRead fires on conversation open.
- * Responsive: mobile shows list OR chat, desktop shows both side-by-side.
- */
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import AuthGuard from "~/app/_components/AuthGuard";
-import LeftSidebar from "~/app/_components/LeftSidebar";
+import ShellLayout from "~/app/_components/ShellLayout";
 import { api } from "~/trpc/react";
 import { User, ArrowLeft, Loader2, Plus, X } from "lucide-react";
 
@@ -282,9 +268,8 @@ function MessagesContent() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-black text-white flex justify-center">
-        <LeftSidebar />
-        <main className="flex-1 max-w-[990px] border-x border-neutral-800 min-h-screen flex">
+      <ShellLayout wide hideRightSidebar>
+        <div className="flex min-h-screen">
           <div className={`w-full lg:w-[350px] border-r border-neutral-800 ${conversationId ? "hidden lg:flex" : "flex"} flex-col`}>
             <ConversationList selectedId={conversationId} onSelect={selectConversation} />
           </div>
@@ -298,8 +283,8 @@ function MessagesContent() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </div>
+      </ShellLayout>
     </AuthGuard>
   );
 }
