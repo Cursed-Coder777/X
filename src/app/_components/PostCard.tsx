@@ -16,11 +16,12 @@
 "use client";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User, MoreHorizontal, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReplyModal from "./ReplyModal";
 import ConfirmModal from "./ConfirmModal";
+import PostMenu from "./PostMenu";
 import { renderContent } from "./renderContent";
 
 interface PostCardProps {
@@ -109,19 +110,7 @@ export default function PostCard({
     },
   });
 
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const router = useRouter();
 
@@ -193,43 +182,14 @@ export default function PostCard({
           <span className="text-neutral-500 flex-shrink-0">·</span>
           <span className="text-neutral-500 flex-shrink-0">{timeAgo(createdAt)}</span>
 
-          <div className="relative ml-auto" ref={menuRef}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
-                className="p-1.5 rounded-full hover:bg-[rgba(29,155,240,0.1)] hover:text-[rgb(29,155,240)] transition-colors cursor-pointer"
-              >
-                <MoreHorizontal size={18} strokeWidth={1.5} />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-52 bg-black border border-neutral-700 rounded-xl shadow-lg z-50 py-1">
-                  {isOwnPost ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                        setMenuOpen(false);
-                      }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors cursor-pointer"
-                    >
-                      <Trash2 size={18} />
-                      Delete
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFollow.mutate({ targetUserId: author.id });
-                        setMenuOpen(false);
-                      }}
-                      disabled={toggleFollow.isPending}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-white hover:bg-neutral-900 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {isFollowing ? "Unfollow" : `Follow @${author.username}`}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+          <PostMenu
+            isOwnPost={isOwnPost}
+            authorUsername={author.username ?? ""}
+            authorId={author.id}
+            isFollowing={isFollowing}
+            toggleFollow={toggleFollow}
+            onDelete={() => setShowDeleteConfirm(true)}
+          />
         </div>
 
         {/* Body */}
