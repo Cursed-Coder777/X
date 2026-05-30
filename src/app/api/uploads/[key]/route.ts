@@ -21,7 +21,8 @@
  *   (e.g., someone requesting /api/uploads/../../../etc/passwd).
  *   Only alphanumeric chars, dots, hyphens, and underscores are allowed.
  */
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 

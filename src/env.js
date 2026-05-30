@@ -29,6 +29,7 @@ export const env = createEnv({
      * Get this from your Vercel Dashboard → Storage → Create Blob Store.
      */
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
+    BLOB_STORE_ID: z.string().optional(),
   },
 
   /**
@@ -50,6 +51,7 @@ export const env = createEnv({
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+    BLOB_STORE_ID: process.env.BLOB_STORE_ID,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

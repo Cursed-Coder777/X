@@ -2,10 +2,11 @@
 import AuthGuard from "~/app/_components/AuthGuard";
 import LeftSidebar from "~/app/_components/LeftSidebar";
 import RightSidebar from "~/app/_components/RightSidebar";
-import { api } from "~/trpc/react";
-import { useSession } from "next-auth/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 import { useRouter } from "next/navigation";
 import { User, Loader2, Heart, Repeat2, MessageCircle, UserPlus } from "lucide-react";
+
+type NotificationItem = RouterOutputs["notification"]["getAll"][number];
 
 function timeAgo(date: Date): string {
   const diffMs = Date.now() - new Date(date).getTime();
@@ -19,15 +20,14 @@ function timeAgo(date: Date): string {
   return `${diffDays}d`;
 }
 
-const typeConfig: Record<string, { icon: typeof Heart; color: string }> = {
+const typeConfig = {
   LIKE: { icon: Heart, color: "text-pink-500" },
   REPOST: { icon: Repeat2, color: "text-green-500" },
   COMMENT: { icon: MessageCircle, color: "text-blue-500" },
   FOLLOW: { icon: UserPlus, color: "text-blue-400" },
-};
+} as const;
 
 export default function NotificationsPage() {
-  const { data: session } = useSession();
   const router = useRouter();
   const utils = api.useUtils();
   const { data: notifications, isLoading } = api.notification.getAll.useQuery();
@@ -41,7 +41,7 @@ export default function NotificationsPage() {
     },
   });
 
-  const handleClick = async (n: typeof notifications[number]) => {
+  const handleClick = async (n: NotificationItem) => {
     if (!n.read) {
       markAsRead.mutate({ id: n.id });
     }
@@ -86,7 +86,7 @@ export default function NotificationsPage() {
 
           <div>
             {notifications?.map((n) => {
-              const config = typeConfig[n.type] ?? typeConfig.LIKE;
+              const config = typeConfig[n.type as keyof typeof typeConfig] ?? typeConfig.LIKE;
               const Icon = config.icon;
               return (
                 <button
