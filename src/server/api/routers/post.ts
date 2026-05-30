@@ -249,12 +249,42 @@ export const postRouter = createTRPCRouter({
   }),
 
   getFeed: protectedProcedure
-    .input(z.object({ onlyFollowing: z.boolean().default(false) }))
+    .input(z.object({
+      onlyFollowing: z.boolean().default(false),
+      limit: z.number().min(1).max(50).default(10),
+      cursor: z.string().optional(),
+    }))
     .query(async ({ ctx, input }) => {
-      const { onlyFollowing } = input;
+      const { onlyFollowing, limit, cursor } = input;
       const currentUserId = ctx.session.user.id;
 
-      let posts;
+      const cursorWhere = cursor ? { createdAt: { lt: new Date(cursor) } } : {};
+      const baseInclude = {
+        author: { select: { id: true, name: true, username: true, image: true } },
+        likes: { where: { userId: currentUserId }, select: { userId: true } },
+        bookmarks: { where: { userId: currentUserId }, select: { userId: true } },
+        reposts: { where: { userId: currentUserId }, select: { userId: true } },
+        _count: { select: { likes: true, comments: true, reposts: true } },
+      };
+
+      function mapPost(post: any) {
+        return {
+          ...post,
+          likedByUser: post.likes.length > 0,
+          bookmarkedByUser: post.bookmarks.length > 0,
+          repostedByUser: post.reposts.length > 0,
+          likeCount: post._count.likes,
+          commentCount: post._count.comments,
+          repostCount: post._count.reposts,
+          likes: undefined,
+          bookmarks: undefined,
+          reposts: undefined,
+          _count: undefined,
+          repostedBy: null,
+        };
+      }
+
+      let items: any[];
       if (onlyFollowing) {
         const followedUsers = await ctx.db.follow.findMany({
           where: { followerId: currentUserId },
@@ -262,51 +292,28 @@ export const postRouter = createTRPCRouter({
         });
         const followedIds = followedUsers.map((f) => f.followingId);
         if (followedIds.length === 0) {
-          return [];
+          return { items: [], nextCursor: undefined };
         }
 
-        // Get posts by followed users
         const directPosts = await ctx.db.post.findMany({
-          where: { authorId: { in: followedIds } },
+          where: { ...cursorWhere, authorId: { in: followedIds } },
           orderBy: { createdAt: "desc" },
-          include: {
-            author: {
-              select: { id: true, name: true, username: true, image: true },
-            },
-            likes: { where: { userId: currentUserId }, select: { userId: true } },
-            bookmarks: { where: { userId: currentUserId }, select: { userId: true } },
-            reposts: { where: { userId: currentUserId }, select: { userId: true } },
-            _count: { select: { likes: true, comments: true, reposts: true } },
-          },
+          take: limit + 1,
+          include: baseInclude,
         });
 
-        // Get reposts by followed users (posts that were reposted by someone the current user follows)
         const repostsByFollowed = await ctx.db.repost.findMany({
-          where: { userId: { in: followedIds } },
+          where: { ...cursorWhere, userId: { in: followedIds } },
           orderBy: { createdAt: "desc" },
+          take: limit + 1,
           include: {
-            post: {
-              include: {
-                author: {
-                  select: { id: true, name: true, username: true, image: true },
-                },
-                likes: { where: { userId: currentUserId }, select: { userId: true } },
-                bookmarks: { where: { userId: currentUserId }, select: { userId: true } },
-                reposts: { where: { userId: currentUserId }, select: { userId: true } },
-                _count: { select: { likes: true, comments: true, reposts: true } },
-              },
-            },
-            user: {
-              select: { name: true, username: true },
-            },
+            post: { include: baseInclude },
+            user: { select: { name: true, username: true } },
           },
         });
 
-        // Deduplicate: if a post appears both as a direct post and a repost, keep the direct post.
-        // If multiple reposts of the same post, keep the one with repostedBy.
         const directIds = new Set(directPosts.map((p) => p.id));
         const repostMap = new Map<string, (typeof repostsByFollowed)[0]>();
-
         for (const r of repostsByFollowed) {
           if (!directIds.has(r.post.id) && !repostMap.has(r.post.id)) {
             repostMap.set(r.post.id, r);
@@ -314,68 +321,28 @@ export const postRouter = createTRPCRouter({
         }
 
         const repostEntries = Array.from(repostMap.values()).map((r) => ({
-          ...r.post,
-          likedByUser: r.post.likes.length > 0,
-          bookmarkedByUser: r.post.bookmarks.length > 0,
-          repostedByUser: r.post.reposts.length > 0,
-          likeCount: r.post._count.likes,
-          commentCount: r.post._count.comments,
-          repostCount: r.post._count.reposts,
+          ...mapPost(r.post),
           repostedBy: { name: r.user.name, username: r.user.username },
-          likes: undefined,
-          bookmarks: undefined,
-          reposts: undefined,
-          _count: undefined,
         }));
 
-        const mappedDirect = directPosts.map((post) => ({
-          ...post,
-          likedByUser: post.likes.length > 0,
-          bookmarkedByUser: post.bookmarks.length > 0,
-          repostedByUser: post.reposts.length > 0,
-          likeCount: post._count.likes,
-          commentCount: post._count.comments,
-          repostCount: post._count.reposts,
-          likes: undefined,
-          bookmarks: undefined,
-          reposts: undefined,
-          _count: undefined,
-          repostedBy: null,
-        }));
-
-        // Merge and sort by createdAt descending
-        posts = [...mappedDirect, ...repostEntries].sort(
+        items = [...directPosts.map(mapPost), ...repostEntries].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
       } else {
-        const allPosts = await ctx.db.post.findMany({
+        const posts = await ctx.db.post.findMany({
+          where: cursorWhere,
           orderBy: { createdAt: "desc" },
-          include: {
-            author: {
-              select: { id: true, name: true, username: true, image: true },
-            },
-            likes: { where: { userId: currentUserId }, select: { userId: true } },
-            bookmarks: { where: { userId: currentUserId }, select: { userId: true } },
-            reposts: { where: { userId: currentUserId }, select: { userId: true } },
-            _count: { select: { likes: true, comments: true, reposts: true } },
-          },
+          take: limit + 1,
+          include: baseInclude,
         });
-        posts = allPosts.map((post) => ({
-          ...post,
-          likedByUser: post.likes.length > 0,
-          bookmarkedByUser: post.bookmarks.length > 0,
-          repostedByUser: post.reposts.length > 0,
-          likeCount: post._count.likes,
-          commentCount: post._count.comments,
-          repostCount: post._count.reposts,
-          likes: undefined,
-          bookmarks: undefined,
-          reposts: undefined,
-          _count: undefined,
-          repostedBy: null,
-        }));
+        items = posts.map(mapPost);
       }
-      return posts;
+
+      const hasMore = items.length > limit;
+      const page = hasMore ? items.slice(0, limit) : items;
+      const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
+
+      return { items: page, nextCursor };
     }),
 
   search: protectedProcedure

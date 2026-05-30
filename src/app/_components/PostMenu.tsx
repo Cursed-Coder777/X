@@ -65,12 +65,12 @@ export default function PostMenu({
                 setOpen(false);
               }}
               disabled={toggleFollow.isPending}
-              className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-white hover:bg-neutral-900 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center justify-center gap-3 w-full px-4 py-3 text-white font-bold text-xl hover:bg-neutral-900 transition-colors cursor-pointer disabled:opacity-50"
             >
               {isFollowing ? (
-                <><UserMinus size={18} /> Unfollow @{authorUsername}</>
+                <><UserMinus size={20} /> Unfollow @{authorUsername}</>
               ) : (
-                <><UserPlus size={18} /> Follow @{authorUsername}</>
+                <><UserPlus size={20} /> Follow @{authorUsername}</>
               )}
             </button>
           )}

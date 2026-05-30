@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import AuthGuard from "~/app/_components/AuthGuard";
 import CreatePost from "~/app/_components/CreatePost";
 import PostCard from "~/app/_components/PostCard";
@@ -7,7 +7,30 @@ import ShellLayout from "~/app/_components/ShellLayout";
 import { api } from "~/trpc/react";
 
 function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
-  const { data: posts, isLoading, error } = api.post.getFeed.useQuery({ onlyFollowing });
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    api.post.getFeed.useInfiniteQuery(
+      { onlyFollowing },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    );
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const posts = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (isLoading) return (
     <div className="flex justify-center pt-4">
@@ -21,16 +44,25 @@ function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
 
   return (
     <div>
-      {posts?.length === 0 && (
+      {posts.length === 0 && (
         <div className="p-6 text-neutral-500 text-center">
           {onlyFollowing
             ? "No posts from followed users yet. Follow someone!"
             : "No posts yet. Be the first to post!"}
         </div>
       )}
-      {posts?.map((post) => (
+      {posts.map((post) => (
         <PostCard key={post.id} {...post} />
       ))}
+      <div ref={sentinelRef} className="h-4" />
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-label="Loading">
+            <circle cx="12" cy="12" r="10" stroke="rgb(29,155,240)" strokeWidth="3" className="opacity-25" />
+            <path d="M4 12a8 8 0 018-8" stroke="rgb(29,155,240)" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
