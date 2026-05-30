@@ -137,6 +137,30 @@ export default function PostCard({
 
   const isOwnPost = session?.user?.id === author.id;
 
+  const [isFollowing, setIsFollowing] = useState(false);
+  const { data: followStatus } = api.user.isFollowing.useQuery(
+    { targetUserId: author.id },
+    { enabled: !!session && !isOwnPost },
+  );
+  useEffect(() => {
+    if (followStatus?.isFollowing !== undefined) {
+      setIsFollowing(followStatus.isFollowing);
+    }
+  }, [followStatus?.isFollowing]);
+
+  const toggleFollow = api.user.toggleFollow.useMutation({
+    onMutate: async () => {
+      await utils.user.isFollowing.cancel();
+      setIsFollowing((prev) => !prev);
+    },
+    onError: () => {
+      setIsFollowing((prev) => !prev);
+    },
+    onSettled: () => {
+      void utils.user.isFollowing.invalidate({ targetUserId: author.id }).catch(console.error);
+    },
+  });
+
   return (
     <article className="border-b border-neutral-800 px-4 py-3 flex gap-3">
       {/* Avatar */}
@@ -169,8 +193,7 @@ export default function PostCard({
           <span className="text-neutral-500 flex-shrink-0">·</span>
           <span className="text-neutral-500 flex-shrink-0">{timeAgo(createdAt)}</span>
 
-          {isOwnPost && (
-            <div className="relative ml-auto" ref={menuRef}>
+          <div className="relative ml-auto" ref={menuRef}>
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
                 className="p-1.5 rounded-full hover:bg-[rgba(29,155,240,0.1)] hover:text-[rgb(29,155,240)] transition-colors cursor-pointer"
@@ -179,21 +202,34 @@ export default function PostCard({
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-52 bg-black border border-neutral-700 rounded-xl shadow-lg z-50 py-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDeleteConfirm(true);
-                      setMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors cursor-pointer"
-                  >
-                    <Trash2 size={18} />
-                    Delete
-                  </button>
+                  {isOwnPost ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeleteConfirm(true);
+                        setMenuOpen(false);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={18} />
+                      Delete
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFollow.mutate({ targetUserId: author.id });
+                        setMenuOpen(false);
+                      }}
+                      disabled={toggleFollow.isPending}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-white hover:bg-neutral-900 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {isFollowing ? "Unfollow" : `Follow @${author.username}`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-          )}
         </div>
 
         {/* Body */}
