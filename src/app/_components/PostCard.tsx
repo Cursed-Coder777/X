@@ -20,6 +20,7 @@ import { useState, useRef, useEffect } from "react";
 import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User, MoreHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReplyModal from "./ReplyModal";
+import ConfirmModal from "./ConfirmModal";
 import { renderContent } from "./renderContent";
 
 interface PostCardProps {
@@ -109,6 +110,7 @@ export default function PostCard({
   });
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -180,12 +182,10 @@ export default function PostCard({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm("Delete this post?")) {
-                        deletePost.mutate({ postId: id });
-                      }
+                      setShowDeleteConfirm(true);
                       setMenuOpen(false);
                     }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors"
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors cursor-pointer"
                   >
                     <Trash2 size={18} />
                     Delete
@@ -211,68 +211,68 @@ export default function PostCard({
         {/* Action Row */}
         <div className="flex items-center justify-between mt-3 text-neutral-500 max-w-[425px] -ml-2">
 
-        {/* Reply icon — opens modal */}
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowReplyModal(true); }}
-          className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer"
-        >
-          <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors">
-            <MessageCircle size={18} strokeWidth={1.5} />
-          </span>
-          {commentCount > 0 ? commentCount : <></>}
-        </button>
-
-        {/* Repost — green on hover */}
-        <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(0,186,124)] cursor-pointer">
-          <span className="p-2 rounded-full group-hover:bg-[rgba(0,186,124,0.1)] transition-colors">
-            <Repeat2 size={18} strokeWidth={1.5} />
-          </span>
-        </button>
-
-        {/* Like — pink on hover */}
-        <button
-          onClick={(e) => { e.stopPropagation(); handleLike(); }}
-          disabled={toggleLike.isPending}
-          className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors cursor-pointer ${isLiked ? "text-[rgb(249,24,128)]" : "hover:text-[rgb(249,24,128)]"}`}
-        >
-          <span className={`p-2 rounded-full transition-colors ${isLiked ? "" : "group-hover:bg-[rgba(249,24,128,0.1)]"}`}>
-            <Heart
-              size={18}
-              strokeWidth={1.5}
-              className={isLiked ? "fill-[rgb(249,24,128)]" : ""}
-            />
-          </span>
-          {likeCount > 0 && (
-            <span className={`text-sm -ml-1.5 ${isLiked ? "text-[rgb(249,24,128)]" : ""}`}>
-              {likeCount}
-            </span>
-          )}
-        </button>
-
-        {/* Views — X blue on hover */}
-        <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
-          <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors">
-            <BarChart2 size={18} strokeWidth={1.5} />
-          </span>
-        </button>
-
-        {/* Bookmark + Share — X blue on hover */}
-        <div className="flex items-center">
+          {/* Reply icon — opens modal */}
           <button
-            onClick={(e) => { e.stopPropagation(); handleBookmark(); }}
-            disabled={toggleBookmark.isPending}
-            className={`group p-2 rounded-full transition-colors cursor-pointer ${isBookmarked ? "text-[rgb(29,155,240)]" : "hover:text-[rgb(29,155,240)]"}`}
+            onClick={(e) => { e.stopPropagation(); setShowReplyModal(true); }}
+            className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer"
           >
-            <span className={`p-2 rounded-full transition-colors block ${isBookmarked ? "" : "group-hover:bg-[rgba(29,155,240,0.1)]"}`}>
-              <Bookmark size={18} strokeWidth={1.5} className={isBookmarked ? "fill-[rgb(29,155,240)]" : ""} />
+            <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors">
+              <MessageCircle size={18} strokeWidth={1.5} />
+            </span>
+            {commentCount > 0 ? commentCount : <></>}
+          </button>
+
+          {/* Repost — green on hover */}
+          <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(0,186,124)] cursor-pointer">
+            <span className="p-2 rounded-full group-hover:bg-[rgba(0,186,124,0.1)] transition-colors">
+              <Repeat2 size={18} strokeWidth={1.5} />
             </span>
           </button>
-          <button className="group p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
-            <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors block">
-              <Upload size={18} strokeWidth={1.5} />
+
+          {/* Like — pink on hover */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleLike(); }}
+            disabled={toggleLike.isPending}
+            className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors cursor-pointer ${isLiked ? "text-[rgb(249,24,128)]" : "hover:text-[rgb(249,24,128)]"}`}
+          >
+            <span className={`p-2 rounded-full transition-colors ${isLiked ? "" : "group-hover:bg-[rgba(249,24,128,0.1)]"}`}>
+              <Heart
+                size={18}
+                strokeWidth={1.5}
+                className={isLiked ? "fill-[rgb(249,24,128)]" : ""}
+              />
+            </span>
+            {likeCount > 0 && (
+              <span className={`text-sm -ml-1.5 ${isLiked ? "text-[rgb(249,24,128)]" : ""}`}>
+                {likeCount}
+              </span>
+            )}
+          </button>
+
+          {/* Views — X blue on hover */}
+          <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
+            <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors">
+              <BarChart2 size={18} strokeWidth={1.5} />
             </span>
           </button>
-        </div>
+
+          {/* Bookmark + Share — X blue on hover */}
+          <div className="flex items-center">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleBookmark(); }}
+              disabled={toggleBookmark.isPending}
+              className={`group p-2 rounded-full transition-colors cursor-pointer ${isBookmarked ? "text-[rgb(29,155,240)]" : "hover:text-[rgb(29,155,240)]"}`}
+            >
+              <span className={`p-2 rounded-full transition-colors block ${isBookmarked ? "" : "group-hover:bg-[rgba(29,155,240,0.1)]"}`}>
+                <Bookmark size={18} strokeWidth={1.5} className={isBookmarked ? "fill-[rgb(29,155,240)]" : ""} />
+              </span>
+            </button>
+            <button className="group p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
+              <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors block">
+                <Upload size={18} strokeWidth={1.5} />
+              </span>
+            </button>
+          </div>
 
         </div>
       </div>
@@ -289,6 +289,18 @@ export default function PostCard({
           />
         )
       }
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Delete post?"
+        message="This can't be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          deletePost.mutate({ postId: id });
+          setShowDeleteConfirm(false);
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </article>
   );
 }
