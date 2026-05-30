@@ -22,6 +22,14 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    /**
+     * Vercel Blob read-write token for image uploads.
+     * Required in production (Vercel), optional in dev — falls back to local filesystem.
+     * Get this from your Vercel project dashboard: Storage → Blob → .env.local snippet
+     */
+    BLOB_READ_WRITE_TOKEN: process.env.NODE_ENV === "production"
+      ? z.string()
+      : z.string().optional(),
   },
 
   /**
@@ -42,6 +50,7 @@ export const env = createEnv({
     AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**
