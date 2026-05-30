@@ -1,21 +1,36 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthGuard from "~/app/_components/AuthGuard";
 import ShellLayout from "~/app/_components/ShellLayout";
 import PostCard from "~/app/_components/PostCard";
 import { api } from "~/trpc/react";
 import { Search, User, Loader2 } from "lucide-react";
 
-export default function SearchPage() {
-  const [input, setInput] = useState("");
-  const [debounced, setDebounced] = useState("");
+function SearchContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const initial = searchParams?.get("q") ?? "";
+  const [input, setInput] = useState(initial);
+  const [debounced, setDebounced] = useState(initial);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(input), 300);
     return () => clearTimeout(timer);
   }, [input]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (input) {
+      params.set("q", input);
+    } else {
+      params.delete("q");
+    }
+    const newQs = params.toString();
+    const newUrl = newQs ? `/search?${newQs}` : "/search";
+    window.history.replaceState(null, "", newUrl);
+  }, [debounced]);
 
   const { data, isLoading } = api.post.searchAll.useQuery(
     { query: debounced },
@@ -32,6 +47,7 @@ export default function SearchPage() {
             <div className="relative">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" />
               <input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Search X"
@@ -94,5 +110,13 @@ export default function SearchPage() {
         )}
       </ShellLayout>
     </AuthGuard>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchContent />
+    </Suspense>
   );
 }

@@ -27,8 +27,6 @@ export default function RightSidebar() {
     e.preventDefault();
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-      setQuery("");
-      inputRef.current?.blur();
     }
   };
 
