@@ -77,26 +77,29 @@ export async function POST(req: NextRequest) {
     // PATH A: VERCEL BLOB
     // ======================
     //
-    // put() uploads the raw file bytes to Vercel Blob storage.
-    // - access: "public" — makes the URL publicly accessible (no auth needed to view images)
+    // put() uploads the file directly to Vercel Blob storage.
+    // We pass the File object directly (not a Buffer) so it streams
+    // the upload without loading the entire file into memory.
+    // - addRandomSuffix: false — we already use UUID, no need for extra hash
+    // - access: "public" — makes the URL publicly accessible
     // - The returned `url` is a full CDN URL like:
     //   https://<store-id>.public.blob.vercel-storage.com/uuid.jpg
     //
-    // How it works on Vercel:
-    //   Vercel automatically sets BLOB_READ_WRITE_TOKEN when you add Blob storage
-    //   in the dashboard. No extra config needed.
-    //
-    // How it works locally:
-    //   You can also use Blob locally by creating a .env with BLOB_READ_WRITE_TOKEN
-    //   copied from your Vercel dashboard. This gives you dev/prod parity.
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const blob = await put(filename, buffer, {
-      access: "public",
-      contentType: file.type,
-    });
-
-    // blob.url is the public URL — store this in your database
-    return NextResponse.json({ url: blob.url });
+    // To view uploaded images: Vercel Dashboard → Storage → Blob → click your store
+    try {
+      const blob = await put(filename, file, {
+        access: "public",
+        contentType: file.type,
+        addRandomSuffix: false,
+      });
+      return NextResponse.json({ url: blob.url });
+    } catch (err) {
+      console.error("Blob upload failed:", err);
+      return NextResponse.json(
+        { error: "Image upload failed. Check Vercel Blob config." },
+        { status: 500 },
+      );
+    }
   } else {
     // ======================
     // PATH B: LOCAL FILESYSTEM (dev fallback)
