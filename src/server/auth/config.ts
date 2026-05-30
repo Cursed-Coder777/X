@@ -42,7 +42,7 @@ export const authConfig = {
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
 
-        return { id: user.id, email: user.email, name: user.name, username: user.username };
+        return { id: user.id, email: user.email, name: user.name, image: user.image, username: user.username };
       },
     }),
   ],
@@ -50,19 +50,25 @@ export const authConfig = {
   pages: { signIn: "/auth/signin" },
   secret: process.env.AUTH_SECRET,
   callbacks: {
-    // Add custom fields to the JWT token when a user signs in
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session: updateData }) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
+        token.picture = user.image;
+      }
+      if (trigger === "update" && updateData) {
+        const data = updateData as { name?: string; image?: string; username?: string };
+        if (data.name) token.name = data.name;
+        if (data.image) token.picture = data.image;
+        if (data.username) token.username = data.username;
       }
       return token;
     },
-    // Extract custom fields from the token into the session object
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string | undefined;
+        session.user.image = token.picture;
       }
       return session;
     },

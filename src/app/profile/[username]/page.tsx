@@ -17,7 +17,9 @@ import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import PostCard from "~/app/_components/PostCard";
-import Sidebar from "~/app/_components/Sidebar";
+import LeftSidebar from "~/app/_components/LeftSidebar";
+import RightSidebar from "~/app/_components/RightSidebar";
+import EditProfileModal from "~/app/_components/EditProfileModal";
 import AuthGuard from "~/app/_components/AuthGuard";
 import LoadingScreen from "~/app/_components/LoadingScreen";
 import { Loader2, MessageCircle } from "lucide-react";
@@ -44,6 +46,7 @@ export default function ProfilePage() {
     { enabled: !!user?.id && session?.user.id !== user?.id }
   );
   const [isFollowing, setIsFollowing] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   useEffect(() => {
     if (followStatus?.isFollowing !== undefined) {
       setIsFollowing(followStatus.isFollowing);
@@ -95,15 +98,28 @@ export default function ProfilePage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-black text-white flex justify-center">
-        {/* Left Sidebar */}
-        <Sidebar />
+        <LeftSidebar />
 
         {/* Center Content */}
         <main className="flex-1 max-w-[600px] border-x border-neutral-800 min-h-screen">
-          {/* Profile er */}
+          {/* Banner */}
+          {user.bannerUrl && (
+            <div className="h-48 w-full relative bg-neutral-800">
+              <img src={user.bannerUrl} alt="Banner" className="object-cover" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+            </div>
+          )}
+
+          {/* Profile */}
           <div className="p-6 border-b border-neutral-800">
             <div className="flex justify-between items-start">
               <div>
+                <div className="flex items-center gap-3 mb-2">
+                  {user.image ? (
+                    <img src={user.image} alt={user.name} width={48} height={48} className="rounded-full object-cover h-12 w-12" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-neutral-700" />
+                  )}
+                </div>
                 <h1 className="text-2xl font-bold text-white">{user.name}</h1>
                 <p className="text-neutral-500">@{user.username}</p>
                 {user.bio && <p className="mt-2 text-white">{user.bio}</p>}
@@ -113,7 +129,14 @@ export default function ProfilePage() {
                   <span><strong className="text-white">{user._count.following}</strong> following</span>
                 </div>
               </div>
-              {!isOwnProfile && (
+              {isOwnProfile ? (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="rounded-full px-4 py-2 font-semibold text-sm transition border border-neutral-600 text-white bg-black hover:bg-neutral-900"
+                >
+                  Edit profile
+                </button>
+              ) : (
                 <div className="flex items-center gap-2">
                   {isFollowing && (
                     <button
@@ -156,9 +179,9 @@ export default function ProfilePage() {
           </div>
         </main>
 
-        {/* Right spacer */}
-        <div className="hidden lg:block w-[350px]" />
+        <RightSidebar />
       </div>
+      {showEditModal && <EditProfileModal onClose={() => setShowEditModal(false)} />}
     </AuthGuard>
   );
 }

@@ -7,7 +7,8 @@
 "use client";
 import AuthGuard from "~/app/_components/AuthGuard";
 import PostCard from "~/app/_components/PostCard";
-import Sidebar from "~/app/_components/Sidebar";
+import LeftSidebar from "~/app/_components/LeftSidebar";
+import RightSidebar from "~/app/_components/RightSidebar";
 import { api } from "~/trpc/react";
 
 export default function BookmarksPage() {
@@ -16,7 +17,7 @@ export default function BookmarksPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-black text-white flex justify-center">
-        <Sidebar />
+        <LeftSidebar />
         <main className="flex-1 max-w-[600px] border-x border-neutral-800 min-h-screen">
           <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800">
             <h1 className="text-xl font-bold px-4 py-4">Bookmarks</h1>
@@ -35,7 +36,7 @@ export default function BookmarksPage() {
             <PostCard key={post.id} {...post} />
           ))}
         </main>
-        <div className="hidden lg:block w-[350px]" />
+        <RightSidebar />
       </div>
     </AuthGuard>
   );

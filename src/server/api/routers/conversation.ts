@@ -2,14 +2,15 @@
  * Conversation router — handles direct messaging between users.
  *
  * Endpoints:
- * - getConversations: List user's conversations with last message + other user info
- * - getOrCreate: Find existing 1-on-1 conversation or create a new one
- * - getMessages: Get messages in a conversation (with isOwn flag per message)
- * - sendMessage: Send a message in a conversation (max 1000 chars)
+ * - getConversations: List with last message, other user info, and unread counts
+ *   (counts messages created after lastReadAt where sender is not current user)
+ * - getOrCreate: Find existing 1-on-1 conversation or create one (prevents self-DM)
+ * - getMessages: Messages in a conversation (isOwn flag per message)
+ * - sendMessage: Send message (max 1000 chars), auto-marks conversation as read
+ * - markAsRead: Update lastReadAt for the current user in a conversation
  *
- * All endpoints require authentication.
- * getMessages and sendMessage verify the user is a participant in the conversation.
- * getOrCreate prevents starting a conversation with yourself.
+ * All endpoints require authentication and participant verification.
+ * Unread counts persisted via lastReadAt on ConversationParticipant.
  */
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -36,15 +37,37 @@ export const conversationRouter = createTRPCRouter({
       },
     });
 
+    const unreadCounts = await Promise.all(
+      participations.map(async (p) => {
+        const lastRead = p.conversation.participants.find(
+          (cp) => cp.userId === userId
+        )?.lastReadAt;
+        if (!lastRead) {
+          const count = await ctx.db.message.count({
+            where: { conversationId: p.conversation.id },
+          });
+          return count;
+        }
+        const count = await ctx.db.message.count({
+          where: {
+            conversationId: p.conversation.id,
+            createdAt: { gt: lastRead },
+            senderId: { not: userId },
+          },
+        });
+        return count;
+      })
+    );
+
     return participations
-      .map((p) => ({
+      .map((p, i) => ({
         id: p.conversation.id,
         createdAt: p.conversation.createdAt,
         otherUser: p.conversation.participants
           .filter((cp) => cp.userId !== userId)
           .map((cp) => cp.user)[0] ?? null,
         lastMessage: p.conversation.messages[0] ?? null,
-        unreadCount: 0,
+        unreadCount: unreadCounts[i] ?? 0,
       }))
       .sort((a, b) => {
         const aTime = a.lastMessage?.createdAt.getTime() ?? a.createdAt.getTime();
@@ -141,6 +164,23 @@ export const conversationRouter = createTRPCRouter({
         },
       });
 
+      // Mark conversation as read when sending a message
+      await ctx.db.conversationParticipant.update({
+        where: { userId_conversationId: { userId, conversationId: input.conversationId } },
+        data: { lastReadAt: new Date() },
+      });
       return { ...message, isOwn: true };
+    }),
+
+  markAsRead: protectedProcedure
+    .input(z.object({ conversationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.conversationParticipant.update({
+        where: {
+          userId_conversationId: { userId: ctx.session.user.id, conversationId: input.conversationId },
+        },
+        data: { lastReadAt: new Date() },
+      });
+      return { success: true };
     }),
 });

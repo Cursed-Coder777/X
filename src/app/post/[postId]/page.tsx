@@ -14,7 +14,8 @@ import Image from "next/image";
 import Link from "next/link";
 import AuthGuard from "~/app/_components/AuthGuard";
 import CommentSection from "~/app/_components/CommentSection";
-import Sidebar from "~/app/_components/Sidebar";
+import LeftSidebar from "~/app/_components/LeftSidebar";
+import RightSidebar from "~/app/_components/RightSidebar";
 
 export default function PostPage() {
   const params = useParams<{ postId: string }>();
@@ -42,7 +43,7 @@ export default function PostPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-black text-white flex justify-center">
-        <Sidebar />
+        <LeftSidebar />
         <main className="flex-1 max-w-[600px] border-x border-neutral-800 min-h-screen">
           {/* Back button */}
           <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800">
@@ -102,7 +103,7 @@ export default function PostPage() {
           {/* Comments */}
           <CommentSection postId={postId} />
         </main>
-        <div className="hidden lg:block w-[350px]" />
+        <RightSidebar />
       </div>
     </AuthGuard>
   );

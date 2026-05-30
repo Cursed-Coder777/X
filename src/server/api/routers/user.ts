@@ -2,16 +2,18 @@
  * User router — handles user accounts, profiles, and social interactions.
  *
  * Endpoints:
- * - signup (public): Register a new user with name, email, username, password
- * - getByUsername: Get user profile data (post/follower/following counts)
- * - isFollowing: Check if current user follows a target user
- * - toggleFollow: Follow or unfollow a user (toggle, prevents self-follow)
- * - getUserPosts: Get a user's posts for their profile page
- * - getFollowers: List users who follow a given user
- * - getFollowing: List users a given user follows
+ * - signup (public): Register with name, email, username, password
+ * - getByUsername: Profile with post/follower/following counts
+ * - isFollowing: Check follow status
+ * - toggleFollow: Follow/unfollow toggle (prevents self-follow)
+ * - getUserPosts: User's posts for their profile page
+ * - updateProfile: Update own name, bio, avatar image
+ * - search: Search users by name or username (for DM new-message picker)
+ * - getSuggestions: 3 users not yet followed by current user (for Who to Follow)
+ * - getFollowers: List a user's followers
+ * - getFollowing: List who a user follows
  *
- * Signup is public; all other endpoints require authentication.
- * Passwords are hashed with bcrypt. Duplicate email/username returns CONFLICT.
+ * Signup is public; all others require authentication.
  */
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
@@ -57,6 +59,7 @@ export const userRouter = createTRPCRouter({
           username: true,
           email: true,
           image: true,
+          bannerUrl: true,
           bio: true,
           createdAt: true,
           _count: {
@@ -104,13 +107,18 @@ export const userRouter = createTRPCRouter({
       });
 
       if (existing) {
-        // Unfollow
         await ctx.db.follow.delete({ where: { id: existing.id } });
         return { following: false };
       } else {
-        // Follow
         await ctx.db.follow.create({
           data: { followerId: currentUserId, followingId: targetUserId },
+        });
+        await ctx.db.notification.create({
+          data: {
+            type: "FOLLOW",
+            recipientId: targetUserId,
+            actorId: currentUserId,
+          },
         });
         return { following: true };
       }
@@ -141,6 +149,59 @@ export const userRouter = createTRPCRouter({
         _count: undefined,
       }));
     }),
+
+  // Update own profile (name, bio, image, bannerUrl)
+  updateProfile: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(50),
+      bio: z.string().max(160).optional(),
+      image: z.string().optional().nullable(),
+      bannerUrl: z.string().optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: {
+          name: input.name,
+          ...(input.bio !== undefined ? { bio: input.bio } : {}),
+          ...(input.image !== undefined ? { image: input.image } : {}),
+          ...(input.bannerUrl !== undefined ? { bannerUrl: input.bannerUrl } : {}),
+        },
+      });
+      return { id: user.id, name: user.name, bio: user.bio, image: user.image, bannerUrl: user.bannerUrl };
+    }),
+
+  search: protectedProcedure
+    .input(z.object({ query: z.string().min(1).max(50) }))
+    .query(async ({ ctx, input }) => {
+      const users = await ctx.db.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: input.query } },
+            { username: { contains: input.query } },
+          ],
+        },
+        select: { id: true, name: true, username: true, image: true },
+        take: 10,
+      });
+      return users.filter((u) => u.id !== ctx.session.user.id);
+    }),
+
+  getSuggestions: protectedProcedure.query(async ({ ctx }) => {
+    const following = await ctx.db.follow.findMany({
+      where: { followerId: ctx.session.user.id },
+      select: { followingId: true },
+    });
+    const followingIds = new Set(following.map((f) => f.followingId));
+    followingIds.add(ctx.session.user.id);
+
+    const suggestions = await ctx.db.user.findMany({
+      where: { id: { notIn: Array.from(followingIds) } },
+      select: { id: true, name: true, username: true, image: true, bio: true },
+      take: 3,
+    });
+    return suggestions;
+  }),
 
   // Get follower/following lists (optional)
   getFollowers: protectedProcedure

@@ -2,28 +2,29 @@
  * Post router — handles all post-related operations.
  *
  * Endpoints:
- * - create: Create a new post (max 280 chars)
- * - getById: Get a single post with like/bookmark/repost status and counts
- * - getAll: Get all posts (newest first) with interaction status
- * - toggleLike: Like or unlike a post (toggle)
- * - toggleBookmark: Bookmark or unbookmark a post (toggle)
- * - toggleRepost: Repost or undo repost of a post (toggle)
- * - getBookmarkedPosts: Get the current user's bookmarked posts
- * - getFeed: Get the feed — either all posts or only from followed users
- *   When onlyFollowing: also includes posts reposted by followed users with repostedBy set
+ * - create: Create a new post (max 280 chars, optional imageUrl)
+ * - getById: Single post with interaction status and counts
+ * - getAll: All posts (newest first) with interaction status
+ * - toggleLike: Like/unlike toggle
+ * - toggleBookmark: Bookmark/unbookmark toggle
+ * - toggleRepost: Repost/undo repost toggle
+ * - getBookmarkedPosts: Current user's bookmarked posts
+ * - getFeed: Feed — all posts or only from followed users (with repost dedup)
+ * - search: Full-text search on post content (case-insensitive contains, limit 50)
+ * - getTrending: Top 5 hashtags from the past 7 days (regex-extracted from content)
  *
- * All endpoints require authentication (protectedProcedure).
- * Interaction status (likedByUser, bookmarkedByUser, repostedByUser) is computed per user.
+ * All endpoints require authentication.
  */
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 export const postRouter = createTRPCRouter({
   create: protectedProcedure
-    .input(z.object({ content: z.string().min(1).max(280) }))
+    .input(z.object({ content: z.string().min(1).max(280), imageUrl: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.post.create({
         data: {
           content: input.content,
+          imageUrl: input.imageUrl,
           authorId: ctx.session.user.id,
         },
       });
@@ -122,16 +123,28 @@ export const postRouter = createTRPCRouter({
       });
 
       if (existingLike) {
-        // Unlike: delete the like
         await ctx.db.like.delete({
           where: { id: existingLike.id },
         });
         return { liked: false, count: await ctx.db.like.count({ where: { postId } }) };
       } else {
-        // Like: create a new like
+        const post = await ctx.db.post.findUnique({
+          where: { id: postId },
+          select: { authorId: true },
+        });
         await ctx.db.like.create({
           data: { userId, postId },
         });
+        if (post && post.authorId !== userId) {
+          await ctx.db.notification.create({
+            data: {
+              type: "LIKE",
+              recipientId: post.authorId,
+              actorId: userId,
+              postId,
+            },
+          });
+        }
         return { liked: true, count: await ctx.db.like.count({ where: { postId } }) };
       }
     }),
@@ -168,7 +181,21 @@ export const postRouter = createTRPCRouter({
         await ctx.db.repost.delete({ where: { id: existingRepost.id } });
         return { reposted: false, count: await ctx.db.repost.count({ where: { postId } }) };
       } else {
+        const post = await ctx.db.post.findUnique({
+          where: { id: postId },
+          select: { authorId: true },
+        });
         await ctx.db.repost.create({ data: { userId, postId } });
+        if (post && post.authorId !== userId) {
+          await ctx.db.notification.create({
+            data: {
+              type: "REPOST",
+              recipientId: post.authorId,
+              actorId: userId,
+              postId,
+            },
+          });
+        }
         return { reposted: true, count: await ctx.db.repost.count({ where: { postId } }) };
       }
     }),
@@ -336,4 +363,59 @@ export const postRouter = createTRPCRouter({
       }
       return posts;
     }),
-  });
+
+  search: protectedProcedure
+    .input(z.object({ query: z.string().min(1).max(100) }))
+    .query(async ({ ctx, input }) => {
+      const posts = await ctx.db.post.findMany({
+        where: {
+          content: { contains: input.query },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+          author: { select: { id: true, name: true, username: true, image: true } },
+          likes: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+          bookmarks: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+          reposts: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+          _count: { select: { likes: true, comments: true, reposts: true } },
+        },
+      });
+      return posts.map((post) => ({
+        ...post,
+        likedByUser: post.likes.length > 0,
+        bookmarkedByUser: post.bookmarks.length > 0,
+        repostedByUser: post.reposts.length > 0,
+        likeCount: post._count.likes,
+        commentCount: post._count.comments,
+        repostCount: post._count.reposts,
+        likes: undefined,
+        bookmarks: undefined,
+        reposts: undefined,
+        _count: undefined,
+        repostedBy: null,
+      }));
+    }),
+
+  getTrending: protectedProcedure.query(async ({ ctx }) => {
+    const recentPosts = await ctx.db.post.findMany({
+      where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+      select: { content: true },
+      take: 500,
+    });
+    const hashtagCount = new Map<string, number>();
+    for (const post of recentPosts) {
+      const tags = post.content.match(/#\w+/g);
+      if (tags) {
+        for (const tag of tags) {
+          const key = tag.toLowerCase();
+          hashtagCount.set(key, (hashtagCount.get(key) ?? 0) + 1);
+        }
+      }
+    }
+    return Array.from(hashtagCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([hashtag, count]) => ({ hashtag, count }));
+  }),
+});

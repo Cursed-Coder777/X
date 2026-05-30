@@ -1,31 +1,30 @@
 /**
  * PostCard — a post in the feed.
- * Displays author avatar, name, username, relative timestamp, and content.
- * The content area is a <Link> to the post detail page (native anchor behavior).
- * The author name is a <button> with router.push() to avoid nested <a> tags.
+ * Layout (flex-col inside a flex-row):
+ *   Avatar (left) | [Header: name @username · time]
+ *                  | [Body: content text]
+ *                  | [Image: optional, rendered when imageUrl present]
+ *                  | [Action row: reply, repost, like, views, bookmark, share]
  *
- * Action row (left to right):
+ * Actions:
  * - Reply: opens ReplyModal
- * - Repost: UI only (no backend)
- * - Like: optimistic toggle with rollback on error
- * - Views: UI only (no backend)
+ * - Repost: UI only (backend ready, need onClick wiring)
+ * - Like: optimistic toggle with rollback
  * - Bookmark: optimistic toggle with rollback
- * - Share: UI only (no backend)
- *
- * Uses optimistic updates for like and bookmark for instant UI feedback.
+ * - Views/Share: UI only (no backend)
  */
 "use client";
 import { api } from "~/trpc/react";
 import { useState } from "react";
 import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReplyModal from "./ReplyModal";
+import { renderContent } from "./renderContent";
 
 interface PostCardProps {
   id: string;
   content: string;
+  imageUrl?: string | null;
   author: { name: string | null; username: string | null; image: string | null };
   createdAt: Date;
   likedByUser: boolean;
@@ -50,6 +49,7 @@ function timeAgo(date: Date): string {
 export default function PostCard({
   id,
   content,
+  imageUrl,
   author,
   createdAt,
   likedByUser: initialLiked,
@@ -114,13 +114,12 @@ export default function PostCard({
       {/* Avatar */}
       <div className="flex-shrink-0">
         {author.image ? (
-          <Image
+          <img
             src={author.image}
             alt={author.name ?? "Avatar"}
             className="h-10 w-10 rounded-full object-cover"
             width={40}
             height={40}
-            priority
           />
         ) : (
           <div className="h-10 w-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
@@ -129,28 +128,34 @@ export default function PostCard({
         )}
       </div>
 
-      {/* Content — click anywhere to go to post detail */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-center gap-1 text-[15px]">
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/profile/${author.username ?? ""}`); }}
+            className="font-bold text-white leading-5 truncate max-w-[120px] hover:underline text-left"
+          >
+            {author.name ?? "Unknown"}
+          </button>
+          <span className="text-neutral-500 truncate">@{author.username}</span>
+          <span className="text-neutral-500 flex-shrink-0">·</span>
+          <span className="text-neutral-500 flex-shrink-0">{timeAgo(createdAt)}</span>
+        </div>
 
-      {/* Header */}
-      <div className="flex items-center gap-1 text-[15px]">
-        <button
-          onClick={(e) => { e.stopPropagation(); router.push(`/profile/${author.username ?? ""}`); }}
-          className="font-bold text-white leading-5 truncate max-w-[120px] hover:underline text-left"
-        >
-          {author.name ?? "Unknown"}
-        </button>
-        <span className="text-neutral-500 truncate">@{author.username}</span>
-        <span className="text-neutral-500 flex-shrink-0">·</span>
-        <span className="text-neutral-500 flex-shrink-0">{timeAgo(createdAt)}</span>
-      </div>
+        {/* Body */}
+        <div className="text-[15px] text-white leading-normal whitespace-pre-wrap break-words mt-0.5">
+          {renderContent(content, router)}
+        </div>
 
-      {/* Body */}
-      <p className="text-[15px] text-white leading-normal whitespace-pre-wrap break-words mt-0.5">
-        {content}
-      </p>
+        {/* Image */}
+        {imageUrl && (
+          <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-700">
+            <img src={imageUrl} alt="Post image" width={500} height={300} className="w-full max-h-80 object-cover" />
+          </div>
+        )}
 
-      {/* Action Row */}
-      <div className="flex items-center justify-between mt-3 text-neutral-500 max-w-[425px] -ml-2">
+        {/* Action Row */}
+        <div className="flex items-center justify-between mt-3 text-neutral-500 max-w-[425px] -ml-2">
 
         {/* Reply icon — opens modal */}
         <button
@@ -215,8 +220,8 @@ export default function PostCard({
           </button>
         </div>
 
+        </div>
       </div>
-
 
       {
         showReplyModal && (
@@ -230,6 +235,6 @@ export default function PostCard({
           />
         )
       }
-    </article >
+    </article>
   );
 }

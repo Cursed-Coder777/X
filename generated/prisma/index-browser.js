@@ -124,6 +124,7 @@ exports.Prisma.UserScalarFieldEnum = {
   email: 'email',
   emailVerified: 'emailVerified',
   image: 'image',
+  bannerUrl: 'bannerUrl',
   username: 'username',
   bio: 'bio',
   password: 'password',
@@ -212,7 +213,8 @@ exports.Prisma.ConversationScalarFieldEnum = {
 exports.Prisma.ConversationParticipantScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
-  conversationId: 'conversationId'
+  conversationId: 'conversationId',
+  lastReadAt: 'lastReadAt'
 };
 
 exports.Prisma.MessageScalarFieldEnum = {
@@ -221,6 +223,17 @@ exports.Prisma.MessageScalarFieldEnum = {
   senderId: 'senderId',
   conversationId: 'conversationId',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  read: 'read',
+  createdAt: 'createdAt',
+  recipientId: 'recipientId',
+  actorId: 'actorId',
+  postId: 'postId',
+  commentId: 'commentId'
 };
 
 exports.Prisma.SortOrder = {
@@ -247,7 +260,8 @@ exports.Prisma.ModelName = {
   VerificationToken: 'VerificationToken',
   Conversation: 'Conversation',
   ConversationParticipant: 'ConversationParticipant',
-  Message: 'Message'
+  Message: 'Message',
+  Notification: 'Notification'
 };
 
 /**

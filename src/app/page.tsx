@@ -13,7 +13,8 @@ import { useState } from "react";
 import AuthGuard from "~/app/_components/AuthGuard";
 import CreatePost from "~/app/_components/CreatePost";
 import PostCard from "~/app/_components/PostCard";
-import Sidebar from "~/app/_components/Sidebar";
+import LeftSidebar from "~/app/_components/LeftSidebar";
+import RightSidebar from "~/app/_components/RightSidebar";
 import { api } from "~/trpc/react";
 
 function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
@@ -45,7 +46,7 @@ export default function HomePage() {
     <AuthGuard>
       <div className="min-h-screen bg-black text-white flex justify-center">
         {/* Left Sidebar */}
-        <Sidebar />
+        <LeftSidebar />
 
         {/* Center Feed */}
         <main className="flex-1 max-w-[600px] border-x border-neutral-800 min-h-screen">
@@ -86,8 +87,7 @@ export default function HomePage() {
           <Feed onlyFollowing={tab === "following"} />
         </main>
 
-        {/* Right side spacer — no right sidebar yet */}
-        <div className="hidden lg:block w-[350px]" />
+        <RightSidebar />
       </div>
     </AuthGuard>
   );

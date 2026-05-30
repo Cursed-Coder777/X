@@ -31,23 +31,26 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
+  bannerUrl     String?
   username      String    @unique
   bio           String?
   password      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  posts         Post[]
-  likes         Like[]
-  bookmarks     Bookmark[]
-  reposts       Repost[]
-  comments      Comment[]
-  following     Follow[]                  @relation("following")
-  followers     Follow[]                  @relation("followers")
-  accounts      Account[] // ✅ opposite for Account.user
-  sessions      Session[] // ✅ opposite for Session.user
-  conversations ConversationParticipant[]
-  sentMessages  Message[]
+  posts              Post[]
+  likes              Like[]
+  bookmarks          Bookmark[]
+  reposts            Repost[]
+  comments           Comment[]
+  following          Follow[]                  @relation("following")
+  followers          Follow[]                  @relation("followers")
+  accounts           Account[] // ✅ opposite for Account.user
+  sessions           Session[] // ✅ opposite for Session.user
+  conversations      ConversationParticipant[]
+  sentMessages       Message[]
+  notifications      Notification[]            @relation("NotificationRecipient")
+  actedNotifications Notification[]            @relation("NotificationActor")
 }
 
 model Post {
@@ -59,10 +62,11 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  likes     Like[]
-  bookmarks Bookmark[]
-  reposts   Repost[]
-  comments  Comment[]
+  likes         Like[]
+  bookmarks     Bookmark[]
+  reposts       Repost[]
+  comments      Comment[]
+  notifications Notification[]
 }
 
 model Like {
@@ -108,8 +112,9 @@ model Comment {
   postId    String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  notifications Notification[]
 }
 
 model Follow {
@@ -171,6 +176,7 @@ model ConversationParticipant {
   id             String       @id @default(cuid())
   userId         String
   conversationId String
+  lastReadAt     DateTime?
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -186,4 +192,24 @@ model Message {
 
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String // LIKE | REPOST | COMMENT | FOLLOW
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  recipientId String
+  actorId     String
+  postId      String?
+  commentId   String?
+
+  recipient User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, read])
+  @@index([recipientId, createdAt])
 }
