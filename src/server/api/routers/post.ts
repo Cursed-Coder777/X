@@ -16,6 +16,7 @@
  * All endpoints require authentication.
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 export const postRouter = createTRPCRouter({
   create: protectedProcedure
@@ -28,6 +29,19 @@ export const postRouter = createTRPCRouter({
           authorId: ctx.session.user.id,
         },
       });
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ postId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.db.post.findUnique({
+        where: { id: input.postId },
+        select: { authorId: true },
+      });
+      if (!post) throw new TRPCError({ code: "NOT_FOUND" });
+      if (post.authorId !== ctx.session.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      await ctx.db.post.delete({ where: { id: input.postId } });
+      return { success: true };
     }),
 
   getById: protectedProcedure
@@ -208,7 +222,7 @@ export const postRouter = createTRPCRouter({
       include: {
         post: {
           include: {
-            author: { select: { name: true, username: true, image: true } },
+            author: { select: { id: true, name: true, username: true, image: true } },
             likes: { where: { userId }, select: { userId: true } },
             reposts: { where: { userId }, select: { userId: true } },
             _count: { select: { likes: true, comments: true, reposts: true } },

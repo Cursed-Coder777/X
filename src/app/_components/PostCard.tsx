@@ -15,8 +15,9 @@
  */
 "use client";
 import { api } from "~/trpc/react";
-import { useState } from "react";
-import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, Repeat2, Heart, BarChart2, Bookmark, Upload, User, MoreHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReplyModal from "./ReplyModal";
 import { renderContent } from "./renderContent";
@@ -25,7 +26,7 @@ interface PostCardProps {
   id: string;
   content: string;
   imageUrl?: string | null;
-  author: { name: string | null; username: string | null; image: string | null };
+  author: { id: string; name: string | null; username: string | null; image: string | null };
   createdAt: Date;
   likedByUser: boolean;
   likeCount: number;
@@ -97,6 +98,29 @@ export default function PostCard({
     },
   });
 
+  const { data: session } = useSession();
+  const deletePost = api.post.delete.useMutation({
+    onSuccess: () => {
+      void utils.post.getAll.invalidate().catch(console.error);
+      void utils.post.getFeed.invalidate().catch(console.error);
+      void utils.post.getBookmarkedPosts.invalidate().catch(console.error);
+      void utils.user.getUserPosts.invalidate().catch(console.error);
+    },
+  });
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const router = useRouter();
 
   const handleBookmark = () => {
@@ -108,6 +132,8 @@ export default function PostCard({
     if (toggleLike.isPending) return;
     toggleLike.mutate({ postId: id });
   };
+
+  const isOwnPost = session?.user?.id === author.id;
 
   return (
     <article className="border-b border-neutral-800 px-4 py-3 flex gap-3">
@@ -140,6 +166,34 @@ export default function PostCard({
           <span className="text-neutral-500 truncate">@{author.username}</span>
           <span className="text-neutral-500 flex-shrink-0">·</span>
           <span className="text-neutral-500 flex-shrink-0">{timeAgo(createdAt)}</span>
+
+          {isOwnPost && (
+            <div className="relative ml-auto" ref={menuRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
+                className="p-1.5 rounded-full hover:bg-[rgba(29,155,240,0.1)] hover:text-[rgb(29,155,240)] transition-colors cursor-pointer"
+              >
+                <MoreHorizontal size={18} strokeWidth={1.5} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-52 bg-black border border-neutral-700 rounded-xl shadow-lg z-50 py-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm("Delete this post?")) {
+                        deletePost.mutate({ postId: id });
+                      }
+                      setMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[15px] text-red-500 hover:bg-neutral-900 transition-colors"
+                  >
+                    <Trash2 size={18} />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Body */}

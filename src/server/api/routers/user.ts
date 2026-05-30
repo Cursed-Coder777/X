@@ -132,7 +132,7 @@ export const userRouter = createTRPCRouter({
         where: { authorId: input.userId },
         orderBy: { createdAt: "desc" },
         include: {
-          author: { select: { name: true, username: true, image: true } },
+          author: { select: { id: true, name: true, username: true, image: true } },
           likes: { where: { userId: ctx.session.user.id }, select: { userId: true } },
           bookmarks: { where: { userId: ctx.session.user.id }, select: { userId: true } },
           _count: { select: { likes: true, comments: true } },

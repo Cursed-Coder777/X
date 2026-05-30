@@ -10,9 +10,10 @@ function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
   const { data: posts, isLoading, error } = api.post.getFeed.useQuery({ onlyFollowing });
 
   if (isLoading) return (
-    <div className="flex items-center justify-center py-20">
-      <svg viewBox="0 0 24 24" className="h-8 w-8 fill-white animate-pulse" aria-label="Loading">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    <div className="flex justify-center pt-4">
+      <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none" aria-label="Loading">
+        <circle cx="12" cy="12" r="10" stroke="rgb(29,155,240)" strokeWidth="3" className="opacity-25" />
+        <path d="M4 12a8 8 0 018-8" stroke="rgb(29,155,240)" strokeWidth="3" strokeLinecap="round" />
       </svg>
     </div>
   );
