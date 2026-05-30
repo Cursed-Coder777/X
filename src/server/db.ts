@@ -1,32 +1,37 @@
 /**
- * Prisma client singleton — Turso (libSQL) edition.
- *
- * Uses @prisma/adapter-libsql to connect to Turso, a serverless SQLite
- * database that works on Vercel (unlike regular SQLite which needs a
- * persistent filesystem).
+ * Prisma client singleton — supports both local SQLite and Turso.
  *
  * How it works:
- *   - @libsql/client creates a connection to Turso's distributed SQLite
- *   - @prisma/adapter-libsql wraps that so Prisma can talk to it
- *   - Prisma schema stays as "sqlite" because Turso IS SQLite, just hosted
+ *   - Locally (no TURSO_AUTH_TOKEN): plain PrismaClient → local SQLite file
+ *   - On Vercel (TURSO_AUTH_TOKEN set): adapter → Turso (serverless SQLite)
  *
- * In dev, you can still use local SQLite by setting DATABASE_URL="file:./prisma/db.sqlite"
- * and omitting TURSO_AUTH_TOKEN.
+ * The schema's datasource URL is hardcoded to "file:./db.sqlite" so Prisma's
+ * validation always passes. At runtime, the adapter overrides this with
+ * the actual Turso URL when deployed.
  */
 import { PrismaClient } from "../../generated/prisma";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { env } from "~/env";
 
 const createPrismaClient = () => {
-  const adapter = new PrismaLibSQL({
-    url: env.DATABASE_URL,
-    authToken: env.TURSO_AUTH_TOKEN,
-  });
+  // TURSO_AUTH_TOKEN present → connect to Turso via libsql adapter
+  if (env.TURSO_AUTH_TOKEN) {
+    // PrismaLibSQL takes the same config as createClient() — it creates the
+    // libsql connection internally. We don't call createClient() ourselves.
+    const adapter = new PrismaLibSQL({
+      url: env.DATABASE_URL,
+      authToken: env.TURSO_AUTH_TOKEN,
+    });
 
+    return new PrismaClient({
+      adapter,
+      log: env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    });
+  }
+
+  // No token → local SQLite (no adapter needed)
   return new PrismaClient({
-    adapter,
-    log:
-      env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    log: env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 };
 
