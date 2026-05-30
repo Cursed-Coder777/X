@@ -48,8 +48,8 @@ function SearchContent() {
   // Sync the debounced value to the URL query string (without causing navigation)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (input) {
-      params.set("q", input);
+    if (debounced) {
+      params.set("q", debounced);
     } else {
       params.delete("q");
     }
@@ -100,7 +100,7 @@ function SearchContent() {
         )}
 
         {/* ── No Results State ─────────────────────────────────────────────── */}
-        {data && data.users.length === 0 && data.posts.length === 0 && (
+        {data?.users.length === 0 && data?.posts.length === 0 && (
           <div className="p-6 text-neutral-500 text-center">No results for &ldquo;{debounced}&rdquo;</div>
         )}
 

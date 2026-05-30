@@ -40,7 +40,7 @@ function Feed({ onlyFollowing }: { onlyFollowing: boolean }) {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+          void fetchNextPage();
         }
       },
       { rootMargin: "200px" }, // Start fetching 200px before the sentinel is visible

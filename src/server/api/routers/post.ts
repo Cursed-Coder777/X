@@ -337,24 +337,55 @@ export const postRouter = createTRPCRouter({
 
       // Helper that converts a raw Prisma post into the flattened shape
       // used by the frontend components
-      function mapPost(post: any) {
+      interface PostFeedItem {
+        id: string;
+        content: string;
+        imageUrl: string | null;
+        authorId: string;
+        author: { id: string; name: string | null; username: string | null; image: string | null };
+        createdAt: Date;
+        updatedAt: Date;
+        likedByUser: boolean;
+        bookmarkedByUser: boolean;
+        repostedByUser: boolean;
+        likeCount: number;
+        commentCount: number;
+        repostCount: number;
+        repostedBy: { name: string | null; username: string | null } | null;
+      }
+
+      function mapPost(post: {
+        id: string;
+        content: string;
+        imageUrl: string | null;
+        authorId: string;
+        author: { id: string; name: string | null; username: string | null; image: string | null };
+        createdAt: Date;
+        updatedAt: Date;
+        likes: { userId: string }[];
+        bookmarks: { userId: string }[];
+        reposts: { userId: string }[];
+        _count: { likes: number; comments: number; reposts: number };
+      }): PostFeedItem {
         return {
-          ...post,
+          id: post.id,
+          content: post.content,
+          imageUrl: post.imageUrl,
+          authorId: post.authorId,
+          author: post.author,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
           likedByUser: post.likes.length > 0,
           bookmarkedByUser: post.bookmarks.length > 0,
           repostedByUser: post.reposts.length > 0,
           likeCount: post._count.likes,
           commentCount: post._count.comments,
           repostCount: post._count.reposts,
-          likes: undefined,
-          bookmarks: undefined,
-          reposts: undefined,
-          _count: undefined,
           repostedBy: null,
         };
       }
 
-      let items: any[];
+      let items: PostFeedItem[];
       if (onlyFollowing) {
         // ── "Following" feed ───────────────────────────────────────────
         // 1. Fetch the list of users the current user follows
@@ -423,7 +454,7 @@ export const postRouter = createTRPCRouter({
       const hasMore = items.length > limit;
       const page = hasMore ? items.slice(0, limit) : items;
       // The cursor is the ISO string of the last item's createdAt
-      const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
+      const nextCursor = hasMore ? page[page.length - 1]!.createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor };
     }),
