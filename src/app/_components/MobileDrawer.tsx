@@ -24,11 +24,14 @@ import {
   MoreHorizontal,
   Feather,
   X,
+  Sun,
+  Moon,
 } from "lucide-react";
 // tRPC client for unread conversation/notification counts
 import { api } from "~/trpc/react";
 // Framer Motion for enter/exit animations
 import { motion } from "framer-motion";
+import { useTheme } from "~/app/providers/ThemeProvider";
 
 // Backdrop: fade in/out
 const backdropVariants = {
@@ -56,6 +59,7 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const { theme, toggleTheme } = useTheme();
 
   // Poll unread conversation count every 15 seconds (only when logged in)
   const { data: conversations } = api.conversation.getConversations.useQuery(undefined, {
@@ -156,6 +160,21 @@ export default function MobileDrawer({ onClose }: { onClose: () => void }) {
             );
           })}
         </nav>
+
+        {/* Theme toggle */}
+        <motion.div variants={itemVariants} className="px-2 mt-2">
+          <button
+            onClick={() => { toggleTheme(); onClose(); }}
+            className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-full"
+          >
+            <span className="flex-shrink-0">
+              {theme === "dark" ? <Sun size={26} strokeWidth={1.75} /> : <Moon size={26} strokeWidth={1.75} />}
+            </span>
+            <span className="text-xl font-normal">
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </span>
+          </button>
+        </motion.div>
 
         {/* Post button (navigates to /compose) */}
         <div className="mt-4 px-2">

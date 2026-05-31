@@ -10,6 +10,7 @@ import { postRouter } from "~/server/api/routers/post";
 import { commentRouter } from "~/server/api/routers/comment";
 import { conversationRouter } from "~/server/api/routers/conversation";
 import { notificationRouter } from "~/server/api/routers/notification";
+import { pollRouter } from "~/server/api/routers/poll";
 // Router factory and caller factory from the shared tRPC setup
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { userRouter } from "./routers/user";
@@ -27,6 +28,7 @@ export const appRouter = createTRPCRouter({
   comment: commentRouter,
   conversation: conversationRouter,
   notification: notificationRouter,
+  poll: pollRouter,
 });
 
 // Re-export the router's type so the client (both React and RSC) can

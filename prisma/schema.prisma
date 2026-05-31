@@ -52,12 +52,14 @@ model User {
     sentMessages  Message[]
     notifications    Notification[] @relation("NotificationRecipient")
     actedNotifications Notification[] @relation("NotificationActor")
+    votes            Vote[]
 }
 
 model Post {
     id        String   @id @default(cuid())
     content   String
     imageUrl  String?
+    gifUrl    String?
     authorId  String
     author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
@@ -67,6 +69,7 @@ model Post {
     bookmarks Bookmark[]
     reposts   Repost[]
     comments  Comment[]
+    poll      Poll?
     notifications Notification[]
 }
 
@@ -214,4 +217,36 @@ model Notification {
 
     @@index([recipientId, read])
     @@index([recipientId, createdAt])
+}
+
+model Poll {
+    id        String   @id @default(cuid())
+    postId    String   @unique
+    expiresAt DateTime?
+    createdAt DateTime @default(now())
+
+    post    Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+    options PollOption[]
+}
+
+model PollOption {
+    id     String @id @default(cuid())
+    pollId String
+    text   String
+
+    poll  Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+    votes Vote[]
+
+    @@unique([pollId, text])
+}
+
+model Vote {
+    id       String @id @default(cuid())
+    optionId String
+    userId   String
+
+    option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+    user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([optionId, userId])
 }

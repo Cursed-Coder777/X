@@ -25,6 +25,7 @@ import Link from "next/link";
 import AuthGuard from "~/app/_components/AuthGuard";       // Ensures user is authenticated
 import CommentSection from "~/app/_components/CommentSection"; // Comment thread for the post
 import ShellLayout from "~/app/_components/ShellLayout";   // App shell (sidebar, header, etc.)
+import PollDisplay from "~/app/_components/PollDisplay";
 
 /**
  * PostPage — page route for "/post/[postId]".
@@ -104,6 +105,39 @@ export default function PostPage() {
             <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-2">
               {post.content}
             </p>
+
+            {/* Poll */}
+            {post.poll && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <PollDisplay poll={post.poll} postId={post.id} />
+              </div>
+            )}
+
+            {/* GIF */}
+            {post.gifUrl && (
+              <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-700">
+                <img
+                  src={post.gifUrl}
+                  alt="GIF"
+                  width={500}
+                  height={300}
+                  className="w-full max-h-80 object-cover"
+                />
+              </div>
+            )}
+
+            {/* Image */}
+            {post.imageUrl && (
+              <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-700">
+                <img
+                  src={post.imageUrl}
+                  alt="Post image"
+                  width={500}
+                  height={300}
+                  className="w-full max-h-80 object-cover"
+                />
+              </div>
+            )}
 
             {/* Timestamp */}
             <span className="text-sm text-neutral-500 mt-2 block">

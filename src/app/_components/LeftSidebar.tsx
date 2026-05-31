@@ -27,11 +27,15 @@ import {
   User,
   MoreHorizontal,
   Feather,
+  Moon,
+  Sun,
 } from "lucide-react";
 // tRPC client for unread counts
 import { api } from "~/trpc/react";
+import { useTheme } from "~/app/providers/ThemeProvider";
 
 export default function LeftSidebar() {
+  const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -76,6 +80,21 @@ export default function LeftSidebar() {
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
         </Link>
+      </div>
+
+      {/* Theme toggle */}
+      <div className="px-2 xl:px-0">
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-4 p-3 rounded-full hover:bg-neutral-900 transition-colors w-fit xl:w-full mx-auto xl:mx-0"
+        >
+          <span className="flex-shrink-0">
+            {theme === "dark" ? <Sun size={26} strokeWidth={1.75} /> : <Moon size={26} strokeWidth={1.75} />}
+          </span>
+          <span className="hidden xl:block text-xl font-normal">
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </span>
+        </button>
       </div>
 
       {/* Navigation items */}

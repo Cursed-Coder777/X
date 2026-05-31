@@ -1,11 +1,3 @@
-/**
- * Global stylesheet for the X Clone project.
- * Imports Tailwind CSS v4 and defines custom theme values:
- * - --font-sans: Geist font with fallbacks
- * - --color-x-blue: X/Twitter brand blue (#1d9bf0)
- *
- * Sets default black background and white text for the X-like dark theme.
- */
 @import "tailwindcss";
 
 @theme {
@@ -17,4 +9,93 @@
 body {
   background-color: #000;
   color: #fff;
+}
+
+html.light body {
+  background-color: #fff;
+  color: #000;
+}
+
+html.light .bg-black {
+  background-color: #fff !important;
+}
+
+html.light .bg-neutral-900 {
+  background-color: #f9fafb !important;
+}
+
+html.light .bg-neutral-900\/50 {
+  background-color: rgba(249, 250, 251, 0.5) !important;
+}
+
+html.light .bg-neutral-800 {
+  background-color: #e5e7eb !important;
+}
+
+html.light .bg-neutral-700 {
+  background-color: #d1d5db !important;
+}
+
+html.light .text-white {
+  color: #000 !important;
+}
+
+html.light .text-neutral-500 {
+  color: #6b7280 !important;
+}
+
+html.light .text-neutral-400 {
+  color: #9ca3af !important;
+}
+
+html.light .border-neutral-800 {
+  border-color: #e5e7eb !important;
+}
+
+html.light .border-neutral-700 {
+  border-color: #d1d5db !important;
+}
+
+html.light .hover\:bg-neutral-900:hover {
+  background-color: #f3f4f6 !important;
+}
+
+html.light .hover\:bg-neutral-900\/50:hover {
+  background-color: rgba(243, 244, 246, 0.5) !important;
+}
+
+html.light .hover\:bg-neutral-800:hover {
+  background-color: #f3f4f6 !important;
+}
+
+html.light .placeholder-neutral-500::placeholder {
+  color: #9ca3af !important;
+}
+
+html.light .bg-neutral-900\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.light .bg-black\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.light .bg-black\/70 {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+html.light .bg-black\/60 {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+html.light .bg-black\/30 {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html.light .caret-white {
+  caret-color: #000 !important;
+}
+
+html.light .fill-white {
+  fill: #000 !important;
 }
