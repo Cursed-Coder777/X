@@ -10,14 +10,13 @@ interface GifResult {
 }
 
 const SAMPLE_GIFS: GifResult[] = [
-  { url: "https://media.tenor.com/5Jp8n4Y6KAMAAAAC/celebration-party.gif", preview: "https://media.tenor.com/5Jp8n4Y6KAMAAAAM/celebration-party.gif", title: "Celebration" },
-  { url: "https://media.tenor.com/LI0PBPEdhBUAAAAC/clap-applause.gif", preview: "https://media.tenor.com/LI0PBPEdhBUAAAAM/clap-applause.gif", title: "Clap" },
-  { url: "https://media.tenor.com/4MLkMT6Y-hcAAAAC/thank-you-thanks.gif", preview: "https://media.tenor.com/4MLkMT6Y-hcAAAAM/thank-you-thanks.gif", title: "Thank You" },
-  { url: "https://media.tenor.com/9WUM2kX1xqcAAAAC/lol-laughing.gif", preview: "https://media.tenor.com/9WUM2kX1xqcAAAAM/lol-laughing.gif", title: "LOL" },
-  { url: "https://media.tenor.com/f4PN4oFVvWQAAAAC/sad-crying.gif", preview: "https://media.tenor.com/f4PN4oFVvWQAAAAM/sad-crying.gif", title: "Sad" },
-  { url: "https://media.tenor.com/0VNb7pLclEwAAAAC/omg-shock.gif", preview: "https://media.tenor.com/0VNb7pLclEwAAAAM/omg-shock.gif", title: "Shock" },
-  { url: "https://media.tenor.com/E8pj0sFQJDIAAAAC/eye-roll-rolling-eyes.gif", preview: "https://media.tenor.com/E8pj0sFQJDIAAAAM/eye-roll-rolling-eyes.gif", title: "Eye Roll" },
-  { url: "https://media.tenor.com/4QQNQi_d_ZsAAAAC/fist-bump.gif", preview: "https://media.tenor.com/4QQNQi_d_ZsAAAAM/fist-bump.gif", title: "Fist Bump" },
+  { url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9sMFMzS2xLR1Jqdzl1QS9naXBoeS5naWY.gif", preview: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9sMFMzS2xLR1Jqdzl1QS9naXBoeS5naWY.gif", title: "Celebration" },
+  { url: "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS81M0E1RXFDeGhBR1dRL2dpYnBoeS5naWY.gif", preview: "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS81M0E1RXFDeGhBR1dRL2dpYnBoeS5naWY.gif", title: "Clap" },
+  { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9sTGdnckxKWWd0WDlBL2dpYnBoeS5naWY.gif", preview: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9sTGdnckxKWWd0WDlBL2dpYnBoeS5naWY.gif", title: "LOL" },
+  { url: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9ST2xHTHBWWmNpUTdZL2dpYnBoeS5naWY.gif", preview: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9ST2xHTHBWWmNpUTdZL2dpYnBoeS5naWY.gif", title: "Sad" },
+  { url: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9kSDFRQkFBOXdQZDJhL2dpYnBoeS5naWY.gif", preview: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9kSDFRQkFBOXdQZDJhL2dpYnBoeS5naWY.gif", title: "Shock" },
+  { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS81bkNEdnhSOHVsS1N5L2dpYnBoeS5naWY.gif", preview: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS81bkNEdnhSOHVsS1N5L2dpYnBoeS5naWY.gif", title: "Eye Roll" },
+  { url: "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9mY1FNOTlPZ2tOWE9hL2dpYnBoeS5naWY.gif", preview: "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDQ3YjI2ZWNmODQzYjE4YzI5NTQ3Y2I4N2Q0YmUzY2I0MjI1N2UzZC9naXBoeS9mY1FNOTlPZ2tOWE9hL2dpYnBoeS5naWY.gif", title: "Fist Bump" },
 ];
 
 export default function GifPicker({ onSelect }: { onSelect: (gifUrl: string) => void }) {

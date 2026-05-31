@@ -21,7 +21,8 @@ interface PollData {
   id: string;
   options: PollOptionData[];
   expiresAt: Date | null;
-  userVotedOptionId: string | null;
+  maxVotes: number;
+  userVotedOptionIds: string[];
 }
 
 interface PostCardProps {

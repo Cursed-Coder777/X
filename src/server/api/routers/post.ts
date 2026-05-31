@@ -19,7 +19,8 @@ interface PollData {
   id: string;
   options: PollOptionData[];
   expiresAt: Date | null;
-  userVotedOptionId: string | null;
+  maxVotes: number;
+  userVotedOptionIds: string[];
 }
 
 interface PostFeedItem {
@@ -65,6 +66,7 @@ export const postRouter = createTRPCRouter({
       imageUrl: z.string().optional(),
       gifUrl: z.string().optional(),
       pollOptions: z.array(z.string().min(1).max(50)).min(2).max(4).optional(),
+      pollMaxVotes: z.number().int().min(1).max(4).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const post = await ctx.db.post.create({
@@ -77,6 +79,7 @@ export const postRouter = createTRPCRouter({
             ? {
                 poll: {
                   create: {
+                    maxVotes: input.pollMaxVotes ?? 1,
                     options: {
                       create: input.pollOptions.map((text) => ({ text })),
                     },
@@ -112,13 +115,13 @@ export const postRouter = createTRPCRouter({
       });
       if (!post) return null;
 
-      let userVotedOptionId: string | null = null;
+      let userVotedOptionIds: string[] = [];
       if (post.poll) {
-        const vote = await ctx.db.vote.findFirst({
+        const votes = await ctx.db.vote.findMany({
           where: { userId, option: { pollId: post.poll.id } },
           select: { optionId: true },
         });
-        userVotedOptionId = vote?.optionId ?? null;
+        userVotedOptionIds = votes.map((v) => v.optionId);
       }
 
       return {
@@ -134,12 +137,13 @@ export const postRouter = createTRPCRouter({
           ? {
               id: post.poll.id,
               expiresAt: post.poll.expiresAt,
+              maxVotes: post.poll.maxVotes,
               options: post.poll.options.map((opt) => ({
                 id: opt.id,
                 text: opt.text,
                 _count: { votes: opt._count.votes },
               })),
-              userVotedOptionId,
+              userVotedOptionIds,
             }
           : null,
       };
@@ -154,13 +158,13 @@ export const postRouter = createTRPCRouter({
 
     return Promise.all(
       posts.map(async (post) => {
-        let userVotedOptionId: string | null = null;
+        let userVotedOptionIds: string[] = [];
         if (post.poll) {
-          const vote = await ctx.db.vote.findFirst({
+          const votes = await ctx.db.vote.findMany({
             where: { userId, option: { pollId: post.poll.id } },
             select: { optionId: true },
           });
-          userVotedOptionId = vote?.optionId ?? null;
+          userVotedOptionIds = votes.map((v) => v.optionId);
         }
         return {
           id: post.id,
@@ -182,7 +186,8 @@ export const postRouter = createTRPCRouter({
             ? {
                 id: post.poll.id,
                 expiresAt: post.poll.expiresAt,
-                userVotedOptionId,
+                maxVotes: post.poll.maxVotes,
+                userVotedOptionIds,
                 options: post.poll.options.map((opt) => ({
                   id: opt.id,
                   text: opt.text,
@@ -279,13 +284,13 @@ export const postRouter = createTRPCRouter({
     return Promise.all(
       bookmarks.map(async (b) => {
         const post = b.post;
-        let userVotedOptionId: string | null = null;
+        let userVotedOptionIds: string[] = [];
         if (post.poll) {
-          const vote = await ctx.db.vote.findFirst({
+          const votes = await ctx.db.vote.findMany({
             where: { userId, option: { pollId: post.poll.id } },
             select: { optionId: true },
           });
-          userVotedOptionId = vote?.optionId ?? null;
+          userVotedOptionIds = votes.map((v) => v.optionId);
         }
         return {
           id: post.id,
@@ -308,7 +313,8 @@ export const postRouter = createTRPCRouter({
             ? {
                 id: post.poll.id,
                 expiresAt: post.poll.expiresAt,
-                userVotedOptionId,
+                maxVotes: post.poll.maxVotes,
+                userVotedOptionIds,
                 options: post.poll.options.map((opt) => ({
                   id: opt.id,
                   text: opt.text,
@@ -348,6 +354,7 @@ export const postRouter = createTRPCRouter({
         poll: {
           id: string;
           expiresAt: Date | null;
+          maxVotes: number;
           options: {
             id: string;
             text: string;
@@ -355,13 +362,13 @@ export const postRouter = createTRPCRouter({
           }[];
         } | null;
       }): Promise<PostFeedItem> {
-        let userVotedOptionId: string | null = null;
+        let userVotedOptionIds: string[] = [];
         if (post.poll) {
-          const vote = await ctx.db.vote.findFirst({
+          const votes = await ctx.db.vote.findMany({
             where: { userId: currentUserId, option: { pollId: post.poll.id } },
             select: { optionId: true },
           });
-          userVotedOptionId = vote?.optionId ?? null;
+          userVotedOptionIds = votes.map((v) => v.optionId);
         }
         return {
           id: post.id,
@@ -383,7 +390,8 @@ export const postRouter = createTRPCRouter({
             ? {
                 id: post.poll.id,
                 expiresAt: post.poll.expiresAt,
-                userVotedOptionId,
+                maxVotes: post.poll.maxVotes,
+                userVotedOptionIds,
                 options: post.poll.options.map((opt) => ({
                   id: opt.id,
                   text: opt.text,
@@ -473,13 +481,13 @@ export const postRouter = createTRPCRouter({
       });
       return Promise.all(
         posts.map(async (post) => {
-          let userVotedOptionId: string | null = null;
+          let userVotedOptionIds: string[] = [];
           if (post.poll) {
-            const vote = await ctx.db.vote.findFirst({
+            const votes = await ctx.db.vote.findMany({
               where: { userId, option: { pollId: post.poll.id } },
               select: { optionId: true },
             });
-            userVotedOptionId = vote?.optionId ?? null;
+            userVotedOptionIds = votes.map((v) => v.optionId);
           }
           return {
             id: post.id,
@@ -501,7 +509,8 @@ export const postRouter = createTRPCRouter({
               ? {
                   id: post.poll.id,
                   expiresAt: post.poll.expiresAt,
-                  userVotedOptionId,
+                  maxVotes: post.poll.maxVotes,
+                  userVotedOptionIds,
                   options: post.poll.options.map((opt) => ({
                     id: opt.id,
                     text: opt.text,
@@ -549,13 +558,13 @@ export const postRouter = createTRPCRouter({
         users,
         posts: await Promise.all(
           posts.map(async (post) => {
-            let userVotedOptionId: string | null = null;
+            let userVotedOptionIds: string[] = [];
             if (post.poll) {
-              const vote = await ctx.db.vote.findFirst({
+              const votes = await ctx.db.vote.findMany({
                 where: { userId, option: { pollId: post.poll.id } },
                 select: { optionId: true },
               });
-              userVotedOptionId = vote?.optionId ?? null;
+              userVotedOptionIds = votes.map((v) => v.optionId);
             }
             return {
               id: post.id,
@@ -577,7 +586,8 @@ export const postRouter = createTRPCRouter({
                 ? {
                     id: post.poll.id,
                     expiresAt: post.poll.expiresAt,
-                    userVotedOptionId,
+                    maxVotes: post.poll.maxVotes,
+                    userVotedOptionIds,
                     options: post.poll.options.map((opt) => ({
                       id: opt.id,
                       text: opt.text,

@@ -19,6 +19,7 @@ export default function CreatePost() {
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[] | null>(null);
+  const [pollMaxVotes, setPollMaxVotes] = useState(1);
   const [showPoll, setShowPoll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -31,6 +32,7 @@ export default function CreatePost() {
       setImagePreview(null);
       setGifUrl(null);
       setPollOptions(null);
+      setPollMaxVotes(1);
       setShowPoll(false);
       await Promise.all([
         utils.post.getFeed.invalidate(),
@@ -65,6 +67,7 @@ export default function CreatePost() {
       imageUrl,
       gifUrl: gifUrl ?? undefined,
       pollOptions: pollOptions ?? undefined,
+      pollMaxVotes: pollOptions ? pollMaxVotes : undefined,
     });
   };
 
@@ -104,8 +107,9 @@ export default function CreatePost() {
     setImagePreview(null);
   };
 
-  const handlePollChange = (poll: { options: string[] } | null) => {
+  const handlePollChange = (poll: { options: string[]; maxVotes: number } | null) => {
     setPollOptions(poll?.options ?? null);
+    setPollMaxVotes(poll?.maxVotes ?? 1);
   };
 
   const router = useRouter();

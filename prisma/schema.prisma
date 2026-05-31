@@ -223,6 +223,7 @@ model Poll {
     id        String   @id @default(cuid())
     postId    String   @unique
     expiresAt DateTime?
+    maxVotes  Int      @default(1)
     createdAt DateTime @default(now())
 
     post    Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
