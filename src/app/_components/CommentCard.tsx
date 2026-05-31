@@ -1,27 +1,31 @@
 /**
- * CommentCard — displays a single comment in the comment list.
+ * CommentCard — displays a single comment with optional nested replies.
  * Shows user avatar (or fallback icon), name, username, relative timestamp,
- * and the comment content. The username links to the user's profile.
- * Clicking the name link stops propagation to avoid triggering parent clicks.
+ * comment content, and a reply button.
+ * Replies are rendered recursively with visual indentation.
  */
 "use client";
 
-// Fallback user icon when no avatar is set
-import { User } from "lucide-react";
-// Next.js optimized image component
+import { User, MessageCircle } from "lucide-react";
 import Image from "next/image";
-// Client-side navigation link
 import Link from "next/link";
+import { useState } from "react";
 
-// Props interface matching the comment shape from the tRPC router
-interface CommentCardProps {
+interface CommentData {
   id: string;
   content: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null };
+  parentId: string | null;
   createdAt: Date;
+  user: { id: string; name: string | null; username: string | null; image: string | null };
+  replies?: CommentData[];
 }
 
-// Converts a Date into a short human-readable relative timestamp (e.g. "5m", "2h", "3d")
+interface CommentCardProps {
+  comment: CommentData;
+  depth?: number;
+  onReply: (commentId: string, username: string) => void;
+}
+
 function timeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - new Date(date).getTime();
@@ -35,46 +39,100 @@ function timeAgo(date: Date): string {
   return `${diffDays}d`;
 }
 
-export default function CommentCard({ content, user, createdAt }: CommentCardProps) {
+export default function CommentCard({ comment, depth = 0, onReply }: CommentCardProps) {
+  const [showReplies, setShowReplies] = useState(depth === 0);
+  const hasReplies = comment.replies && comment.replies.length > 0;
+
   return (
-    <div className="flex gap-3 px-4 py-3">
-      {/* Avatar column */}
-      <div className="flex-shrink-0">
-        {user.image ? (
-          <Image
-            src={user.image}
-            alt={user.name ?? "Avatar"}
-            className="h-8 w-8 rounded-full object-cover"
-            width={32}
-            height={32}
-          />
-        ) : (
-          <div className="h-8 w-8 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
-            <User size={16} />
+    <div>
+      <div className={`flex gap-3 px-4 py-3 ${depth > 0 ? "pl-12" : ""}`}>
+        {/* Avatar column */}
+        <div className="flex-shrink-0">
+          {comment.user.image ? (
+            <Image
+              src={comment.user.image}
+              alt={comment.user.name ?? "Avatar"}
+              className="h-8 w-8 rounded-full object-cover"
+              width={32}
+              height={32}
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
+              <User size={16} />
+            </div>
+          )}
+        </div>
+
+        {/* Body column */}
+        <div className="flex-1 min-w-0">
+          {/* Author row: name (linked), @username, dot separator, timestamp */}
+          <div className="flex items-center gap-1 text-[15px]">
+            <Link
+              href={`/profile/${comment.user.username ?? ""}`}
+              className="font-bold text-white text-sm hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {comment.user.name ?? "Unknown"}
+            </Link>
+            <span className="text-neutral-500 text-sm truncate">@{comment.user.username}</span>
+            <span className="text-neutral-500">·</span>
+            <span className="text-neutral-500 text-sm">{timeAgo(comment.createdAt)}</span>
           </div>
-        )}
+          {/* Comment body text */}
+          <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-0.5">
+            {comment.content}
+          </p>
+
+          {/* Reply button — only on top-level comments */}
+          {depth === 0 && (
+            <button
+              onClick={() => onReply(comment.id, comment.user.username ?? "")}
+              className="flex items-center gap-1.5 mt-1 text-neutral-500 hover:text-[rgb(29,155,240)] transition-colors text-sm"
+            >
+              <MessageCircle size={14} strokeWidth={1.5} />
+              <span>Reply</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Body column */}
-      <div className="flex-1 min-w-0">
-        {/* Author row: name (linked), @username, dot separator, timestamp */}
-        <div className="flex items-center gap-1 text-[15px]">
-          <Link
-            href={`/profile/${user.username ?? ""}`}
-            className="font-bold text-white text-sm hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {user.name ?? "Unknown"}
-          </Link>
-          <span className="text-neutral-500 text-sm truncate">@{user.username}</span>
-          <span className="text-neutral-500">·</span>
-          <span className="text-neutral-500 text-sm">{timeAgo(createdAt)}</span>
+      {/* Nested replies */}
+      {hasReplies && (
+        <div className="relative">
+          {/* Vertical connector line */}
+          {depth === 0 && (
+            <div className="absolute left-[39px] top-0 bottom-0 w-px bg-neutral-800" />
+          )}
+          {/* Toggle replies button */}
+          {depth === 0 && !showReplies && (
+            <button
+              onClick={() => setShowReplies(true)}
+              className="ml-12 mb-1 text-[rgb(29,155,240)] text-sm hover:underline"
+            >
+              Show {comment.replies!.length} {comment.replies!.length === 1 ? "reply" : "replies"}
+            </button>
+          )}
+          {/* Render replies */}
+          {showReplies &&
+            comment.replies!.map((reply) => (
+              <CommentCard
+                key={reply.id}
+                comment={reply}
+                depth={depth + 1}
+                onReply={onReply}
+              />
+            ))}
+          {/* Hide replies button */}
+          {depth === 0 && showReplies && comment.replies!.length > 0 && (
+            <button
+              onClick={() => setShowReplies(false)}
+              className="ml-12 mb-1 text-[rgb(29,155,240)] text-sm hover:underline"
+            >
+              Hide replies
+            </button>
+          )}
         </div>
-        {/* Comment body text */}
-        <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-0.5">
-          {content}
-        </p>
-      </div>
+      )}
     </div>
   );
 }

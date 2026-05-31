@@ -7,7 +7,7 @@
 //   Like            - Many-to-many likes between users and posts (unique per user+post)
 //   Bookmark        - Many-to-many bookmarks between users and posts (unique per user+post)
 //   Repost          - Many-to-many reposts between users and posts (unique per user+post)
-//   Comment         - Replies to posts (many-to-one with both User and Post)
+//   Comment         - Replies to posts (many-to-one with both User and Post, supports nested replies via parentId)
 //   Follow          - Self-referential follow relationships between users
 //   Account/Session - NextAuth required models for session persistence
 //   VerificationToken - NextAuth model for email verification
@@ -111,6 +111,7 @@ model Comment {
     content   String
     userId    String
     postId    String
+    parentId  String?
     createdAt DateTime @default(now())
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)

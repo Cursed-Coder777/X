@@ -245,7 +245,10 @@ export default function PostCard({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <article className="border-b border-neutral-800 px-4 py-3">
+    <article
+      onClick={() => router.push(`/post/${id}`)}
+      className="border-b border-neutral-800 px-4 py-3 cursor-pointer hover:bg-neutral-900/50 transition-colors"
+    >
       {/* Reposted-by label — rendered above the avatar when someone the current user follows reposted this */}
       {repostedBy && (
         <div className="flex items-center gap-1 text-[13px] text-neutral-500 mb-2 pl-1">
@@ -380,7 +383,10 @@ export default function PostCard({
             </button>
 
             {/* Views — UI only (no backend tracking yet) */}
-            <button className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
+            <button
+              onClick={(e) => { e.stopPropagation(); }}
+              className="group flex items-center gap-1.5 p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer"
+            >
               <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors">
                 <BarChart2 size={18} strokeWidth={1.5} />
               </span>
@@ -399,7 +405,10 @@ export default function PostCard({
                 </span>
               </button>
               {/* Share — UI only (native share or copy link could be added) */}
-              <button className="group p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer">
+              <button
+                onClick={(e) => { e.stopPropagation(); }}
+                className="group p-2 rounded-full transition-colors hover:text-[rgb(29,155,240)] cursor-pointer"
+              >
                 <span className="p-2 rounded-full group-hover:bg-[rgba(29,155,240,0.1)] transition-colors block">
                   <Upload size={18} strokeWidth={1.5} />
                 </span>
