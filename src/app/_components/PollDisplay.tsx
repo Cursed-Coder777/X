@@ -40,7 +40,7 @@ interface PollData {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function PollDisplay({ poll, postId }: { poll: PollData; postId: string }) {
+export default function PollDisplay({ poll }: { poll: PollData }) {
   // tRPC utility bag for cache invalidation
   const utils = api.useUtils();
   // Local state for selected option IDs (initialised from the user's existing votes)

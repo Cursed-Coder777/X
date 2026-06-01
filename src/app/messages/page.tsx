@@ -161,6 +161,7 @@ function ChatView({ conversationId, onBack }: { conversationId: string; onBack: 
 
   useEffect(() => {
     if (conversationId) markAsRead.mutate({ conversationId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
   useEffect(() => {

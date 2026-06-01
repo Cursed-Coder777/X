@@ -277,7 +277,7 @@ export default function PostCard({
           {/* Poll widget */}
           {poll && (
             <div onClick={(e) => e.stopPropagation()}>
-              <PollDisplay poll={poll} postId={id} />
+              <PollDisplay poll={poll} />
             </div>
           )}
 
@@ -310,7 +310,7 @@ export default function PostCard({
 
             {/* Repost */}
             <button
-              onClick={(e) => { e.stopPropagation(); handleRepost(); }}
+              onClick={(e) => { e.stopPropagation(); toggleRepost.mutate({ postId: id }); }}
               disabled={toggleRepost.isPending}
               className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors cursor-pointer ${isReposted ? "text-[rgb(0,186,124)]" : "hover:text-[rgb(0,186,124)]"}`}
             >
@@ -322,7 +322,7 @@ export default function PostCard({
 
             {/* Like */}
             <button
-              onClick={(e) => { e.stopPropagation(); handleLike(); }}
+              onClick={(e) => { e.stopPropagation(); toggleLike.mutate({ postId: id }); }}
               disabled={toggleLike.isPending}
               className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors cursor-pointer ${isLiked ? "text-[rgb(249,24,128)]" : "hover:text-[rgb(249,24,128)]"}`}
             >
@@ -345,7 +345,7 @@ export default function PostCard({
             {/* Bookmark and Share */}
             <div className="flex items-center">
               <button
-                onClick={(e) => { e.stopPropagation(); handleBookmark(); }}
+                onClick={(e) => { e.stopPropagation(); toggleBookmark.mutate({ postId: id }); }}
                 disabled={toggleBookmark.isPending}
                 className={`group p-2 rounded-full transition-colors cursor-pointer ${isBookmarked ? "text-[rgb(29,155,240)]" : "hover:text-[rgb(29,155,240)]"}`}
               >

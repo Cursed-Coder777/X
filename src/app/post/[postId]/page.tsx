@@ -101,7 +101,7 @@ export default function PostPage() {
             {/* Poll */}
             {post.poll && (
               <div onClick={(e) => e.stopPropagation()}>
-                <PollDisplay poll={post.poll} postId={post.id} />
+                <PollDisplay poll={post.poll} />
               </div>
             )}
 
