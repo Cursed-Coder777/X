@@ -51,3 +51,6 @@ yarn-error.log*
 # uploaded images
 /uploads
 .env*
+db
+db-wal
+db-shm
