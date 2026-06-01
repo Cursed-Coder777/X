@@ -1,8 +1,24 @@
+/**
+ * EmojiPicker — pop-up emoji grid for inserting emoji into a post or comment.
+ *
+ * Features:
+ *   - 64 common emoji in an 8-column grid with scroll
+ *   - Click-outside closes the picker
+ *   - Inserts the selected emoji at the cursor position via the onSelect callback
+ *   - Styled to match X's dark theme
+ *
+ * Props:
+ *   onSelect — called with the emoji string when the user clicks one
+ */
+
 "use client";
 
+// React hooks for state management and click-outside detection
 import { useState, useRef, useEffect } from "react";
+// Smiley icon button to toggle the picker
 import { Smile } from "lucide-react";
 
+// Static emoji palette — covers the most common reactions and expressions
 const EMOJIS = [
   "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "🥲",
   "😊", "😇", "🙂", "😉", "😌", "😍", "🥰", "😘",
@@ -19,6 +35,7 @@ export default function EmojiPicker({ onSelect }: { onSelect: (emoji: string) =>
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Close the picker when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -31,6 +48,7 @@ export default function EmojiPicker({ onSelect }: { onSelect: (emoji: string) =>
 
   return (
     <div ref={ref} className="relative">
+      {/* Toggle button in the composer toolbar */}
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -38,6 +56,8 @@ export default function EmojiPicker({ onSelect }: { onSelect: (emoji: string) =>
       >
         <Smile size={18} />
       </button>
+
+      {/* Drop-up emoji grid */}
       {open && (
         <div className="absolute bottom-full left-0 mb-2 p-2 bg-black border border-neutral-700 rounded-xl shadow-lg z-50 w-[280px]">
           <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">

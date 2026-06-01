@@ -1,7 +1,13 @@
 /**
  * Environment variable validation using Zod and @t3-oss/env-nextjs.
- * Ensures all required env vars (AUTH_SECRET, DATABASE_URL, etc.) are present
- * and correctly typed at build/start time. Fails fast if validation fails.
+ *
+ * This module:
+ * 1. Defines Zod schemas for every expected environment variable
+ * 2. Validates them at build/start time
+ * 3. Exports a typed `env` object for safe access throughout the app
+ *
+ * Fails fast with a clear error if a required variable is missing or
+ * incorrectly typed.
  */
 
 // createEnv from t3-env validates server and client env vars separately
@@ -13,52 +19,62 @@ import { z } from "zod";
 // incorrectly-typed variable throws at build/start time
 export const env = createEnv({
   /**
-   * Specify your server-side environment variables schema here. This way you can ensure the app
-   * isn't built with invalid env vars.
+   * Server-side environment variables schema.
+   * These variables are only available on the server (never exposed to the
+   * browser). Access violations in client code will throw at build time.
    */
   server: {
     // AUTH_SECRET: required in production but optional in dev (NextAuth
-    // can auto-generate a development secret)
+    // can auto-generate a development secret for local dev convenience)
     AUTH_SECRET:
       process.env.NODE_ENV === "production"
         ? z.string()
         : z.string().optional(),
-    // Discord OAuth credentials
+
+    // AUTH_DISCORD_ID / AUTH_DISCORD_SECRET: Discord OAuth credentials
+    // used by NextAuth's Discord provider for social login
     AUTH_DISCORD_ID: z.string(),
     AUTH_DISCORD_SECRET: z.string(),
-    // Database connection string (SQLite / Turso / PostgreSQL)
+
+    // DATABASE_URL: Connection string for the database.
+    // Local dev: "file:./prisma/db.sqlite" — Production: Turso libsql:// URL
     DATABASE_URL: z.string().url(),
-    // Current Node environment — defaults to "development"
+
+    // NODE_ENV: Current runtime environment — defaults to "development"
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+
     /**
      * Vercel Blob read-write token for image uploads in production.
      * Optional here — the upload route checks at runtime and falls back to
      * local filesystem if absent (useful for local dev without Blob setup).
-     * Get this from your Vercel Dashboard → Storage → Create Blob Store.
+     * Get this from: Vercel Dashboard → Storage → Create Blob Store
      */
     BLOB_READ_WRITE_TOKEN: z.string().optional(),
     BLOB_STORE_ID: z.string().optional(),
+
+    // TURSO_AUTH_TOKEN: Required only when using Turso (production).
+    // Not needed for local SQLite dev.
     TURSO_AUTH_TOKEN: z.string().optional(),
   },
 
   /**
-   * Specify your client-side environment variables schema here. This way you can ensure the app
-   * isn't built with invalid env vars. To expose them to the client, prefix them with
-   * `NEXT_PUBLIC_`.
+   * Client-side environment variables schema.
+   * To expose a variable to the browser, prefix it with NEXT_PUBLIC_.
+   * The runtimeEnv mapping below is still required for all such variables.
    */
   client: {
-    // Next.js requires at least one key — add public vars here when needed
+    // Placeholder for future public variables:
     // NEXT_PUBLIC_CLIENTVAR: z.string(),
   },
 
   /**
-   * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
-   * middlewares) or client-side so we need to destruct manually.
+   * Runtime value mapping.
+   * Each key in the schemas above must be mapped to its process.env value.
+   * Next.js needs this to properly bundle client-side env vars at build time,
+   * since you cannot destructure `process.env` in edge runtimes or client code.
    */
-  // Map each env key to its runtime value so Next.js can bundle the
-  // client-side subset during the build step
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
@@ -69,14 +85,18 @@ export const env = createEnv({
     TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   },
+
   /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
-   * useful for Docker builds.
+   * Skip validation flag.
+   * Set SKIP_ENV_VALIDATION=true to bypass env checks (useful in Docker builds
+   * where certain env vars may not be available at build time).
    */
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+
   /**
-   * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
-   * `SOME_VAR=''` will throw an error.
+   * Empty string handling.
+   * Treats empty strings as undefined, so `SOME_VAR: z.string()` with
+   * `SOME_VAR=''` will throw an error rather than silently passing.
    */
   emptyStringAsUndefined: true,
 });

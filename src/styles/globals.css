@@ -1,3 +1,24 @@
+/**
+ * Global CSS stylesheet for the X Clone project.
+ *
+ * Uses Tailwind CSS v4 with @import "tailwindcss" (CSS-first configuration,
+ * no tailwind.config.js needed).
+ *
+ * Theme configuration:
+ *   - Custom font-family via the `--font-geist-sans` CSS variable
+ *   - Custom `--color-x-blue` token matching X's brand blue (#1d9bf0)
+ *
+ * Light mode overrides:
+ *   Tailwind v4 uses a `light` class strategy for dark mode. When the
+ *   <html> element has the class "light", all dark-mode background, text,
+ *   border, and hover colours are overridden with light-mode equivalents.
+ *   This provides full X-like light theme support without modifying every
+ *   component.
+ *
+ * Every light-mode override uses !important to ensure it wins over the
+ * dark-mode default applied via Tailwind classes in the components.
+ */
+
 @import "tailwindcss";
 
 @theme {
@@ -6,16 +27,22 @@
   --color-x-blue: rgb(29, 155, 240);
 }
 
+/* ── Base Styles ─────────────────────────────────────────────────────────────── */
+
 body {
   background-color: #000;
   color: #fff;
 }
+
+/* ── Light Mode Overrides ────────────────────────────────────────────────────── */
+/* When <html class="light"> is applied, override dark Tailwind utility classes */
 
 html.light body {
   background-color: #fff;
   color: #000;
 }
 
+/* Background colours — map dark neutrals to light greys */
 html.light .bg-black {
   background-color: #fff !important;
 }
@@ -36,46 +63,6 @@ html.light .bg-neutral-700 {
   background-color: #d1d5db !important;
 }
 
-html.light .text-white {
-  color: #000 !important;
-}
-
-html.light .text-neutral-500 {
-  color: #6b7280 !important;
-}
-
-html.light .text-neutral-400 {
-  color: #9ca3af !important;
-}
-
-html.light .border-neutral-800 {
-  border-color: #e5e7eb !important;
-}
-
-html.light .border-neutral-700 {
-  border-color: #d1d5db !important;
-}
-
-html.light .hover\:bg-neutral-900:hover {
-  background-color: #f3f4f6 !important;
-}
-
-html.light .hover\:bg-neutral-900\/50:hover {
-  background-color: rgba(243, 244, 246, 0.5) !important;
-}
-
-html.light .hover\:bg-neutral-800:hover {
-  background-color: #f3f4f6 !important;
-}
-
-html.light .placeholder-neutral-500::placeholder {
-  color: #9ca3af !important;
-}
-
-html.light .bg-neutral-900\/80 {
-  background-color: rgba(255, 255, 255, 0.8) !important;
-}
-
 html.light .bg-black\/80 {
   background-color: rgba(255, 255, 255, 0.8) !important;
 }
@@ -92,6 +79,51 @@ html.light .bg-black\/30 {
   background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
+html.light .bg-neutral-900\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Text colours */
+html.light .text-white {
+  color: #000 !important;
+}
+
+html.light .text-neutral-500 {
+  color: #6b7280 !important;
+}
+
+html.light .text-neutral-400 {
+  color: #9ca3af !important;
+}
+
+/* Border colours */
+html.light .border-neutral-800 {
+  border-color: #e5e7eb !important;
+}
+
+html.light .border-neutral-700 {
+  border-color: #d1d5db !important;
+}
+
+/* Hover states */
+html.light .hover\:bg-neutral-900:hover {
+  background-color: #f3f4f6 !important;
+}
+
+html.light .hover\:bg-neutral-900\/50:hover {
+  background-color: rgba(243, 244, 246, 0.5) !important;
+}
+
+html.light .hover\:bg-neutral-800:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Placeholder text */
+html.light .placeholder-neutral-500::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Caret and fill colours */
 html.light .caret-white {
   caret-color: #000 !important;
 }

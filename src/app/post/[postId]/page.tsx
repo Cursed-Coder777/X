@@ -1,47 +1,50 @@
 /**
- * Post detail page — displays a single post and its comment thread.
- * Sets the document title dynamically based on the post content.
+ * Post detail page — route: /post/[postId]
+ *
+ * Displays a single post with full content, author info, stats, and an
+ * interactive comment section. Dynamically updates the document title
+ * to show a preview of the post content.
+ *
+ * Features:
+ *   - Back link to home feed
+ *   - Author avatar, name, @username (linked to profile)
+ *   - Post content (text, poll, GIF, image, timestamp)
+ *   - Like and comment counts
+ *   - Nested comment thread via CommentSection
+ *   - Loading and not-found states
  */
 
 "use client";
 
-// ── Next.js ──────────────────────────────────────────────────────────────────
+// Params hook to read [postId] from the URL
 import { useParams } from "next/navigation";
-
-// ── tRPC API ─────────────────────────────────────────────────────────────────
+// tRPC client for fetching the post
 import { api } from "~/trpc/react";
-
-// ── React ────────────────────────────────────────────────────────────────────
+// Effect for updating the document title dynamically
 import { useEffect } from "react";
-
-// ── Icons ────────────────────────────────────────────────────────────────────
+// Icons for fallback avatar and stats
 import { User, Heart, MessageCircle } from "lucide-react";
-
-// ── Next.js Image & Link ─────────────────────────────────────────────────────
+// Next.js image component and link
 import Image from "next/image";
 import Link from "next/link";
-
-// ── Custom Components ────────────────────────────────────────────────────────
-import AuthGuard from "~/app/_components/AuthGuard";       // Ensures user is authenticated
-import CommentSection from "~/app/_components/CommentSection"; // Comment thread for the post
-import ShellLayout from "~/app/_components/ShellLayout";   // App shell (sidebar, header, etc.)
+// App components
+import AuthGuard from "~/app/_components/AuthGuard";
+import CommentSection from "~/app/_components/CommentSection";
+import ShellLayout from "~/app/_components/ShellLayout";
 import PollDisplay from "~/app/_components/PollDisplay";
 
-/**
- * PostPage — page route for "/post/[postId]".
- */
 export default function PostPage() {
-  // ── Route Params ────────────────────────────────────────────────────────
+  // Read the postId from dynamic route params
   const params = useParams<{ postId: string }>();
   const postId = params?.postId ?? "";
 
-  // Fetch the single post by its ID
+  // Fetch the post by ID (only when postId is available)
   const { data: post, isLoading } = api.post.getById.useQuery(
     { id: postId },
     { enabled: !!postId }
   );
 
-  // Dynamically update the document title based on the post content
+  // Dynamically update the document title as data loads
   useEffect(() => {
     if (isLoading) {
       document.title = "Loading... / X";
@@ -53,14 +56,14 @@ export default function PostPage() {
     }
   }, [isLoading, post]);
 
-  // ── Loading & Error States ──────────────────────────────────────────────
+  // Loading & error states
   if (isLoading) return <div className="p-8 text-neutral-500">Loading post...</div>;
   if (!post) return <div className="p-8 text-neutral-500">Post not found</div>;
 
   return (
     <AuthGuard>
       <ShellLayout>
-        {/* ── Sticky Back Link Header ─────────────────────────────────────── */}
+        {/* Sticky header with back link */}
         <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800">
           <div className="px-4 py-3">
             <Link href="/" className="text-white text-xl font-bold hover:underline">
@@ -69,18 +72,12 @@ export default function PostPage() {
           </div>
         </div>
 
-        {/* ── Post Content ─────────────────────────────────────────────────── */}
+        {/* Post content */}
         <div className="px-4 py-3 flex gap-3">
           {/* Author avatar */}
           <div className="flex-shrink-0">
             {post.author.image ? (
-              <Image
-                src={post.author.image}
-                alt={post.author.name ?? "Avatar"}
-                className="h-10 w-10 rounded-full object-cover"
-                width={40}
-                height={40}
-              />
+              <Image src={post.author.image} alt={post.author.name ?? "Avatar"} className="h-10 w-10 rounded-full object-cover" width={40} height={40} />
             ) : (
               <div className="h-10 w-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
                 <User size={20} />
@@ -90,21 +87,16 @@ export default function PostPage() {
 
           {/* Post body */}
           <div className="flex-1 min-w-0">
-            {/* Author name & username */}
+            {/* Author name & @username */}
             <div className="flex items-center gap-1 text-[15px]">
-              <Link
-                href={`/profile/${post.author.username ?? ""}`}
-                className="font-bold text-white hover:underline"
-              >
+              <Link href={`/profile/${post.author.username ?? ""}`} className="font-bold text-white hover:underline">
                 {post.author.name ?? "Unknown"}
               </Link>
               <span className="text-neutral-500 truncate">@{post.author.username}</span>
             </div>
 
-            {/* Post content text */}
-            <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-2">
-              {post.content}
-            </p>
+            {/* Content text */}
+            <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-2">{post.content}</p>
 
             {/* Poll */}
             {post.poll && (
@@ -113,29 +105,17 @@ export default function PostPage() {
               </div>
             )}
 
-            {/* GIF */}
+            {/* GIF attachment */}
             {post.gifUrl && (
               <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-700">
-                <img
-                  src={post.gifUrl}
-                  alt="GIF"
-                  width={500}
-                  height={300}
-                  className="w-full max-h-80 object-cover"
-                />
+                <img src={post.gifUrl} alt="GIF" width={500} height={300} className="w-full max-h-80 object-cover" />
               </div>
             )}
 
-            {/* Image */}
+            {/* Image attachment */}
             {post.imageUrl && (
               <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-700">
-                <img
-                  src={post.imageUrl}
-                  alt="Post image"
-                  width={500}
-                  height={300}
-                  className="w-full max-h-80 object-cover"
-                />
+                <img src={post.imageUrl} alt="Post image" width={500} height={300} className="w-full max-h-80 object-cover" />
               </div>
             )}
 
@@ -144,25 +124,21 @@ export default function PostPage() {
               {new Date(post.createdAt).toLocaleString()}
             </span>
 
-            {/* Stats row (comment count, like count) */}
+            {/* Stats row */}
             <div className="flex gap-6 mt-3 text-neutral-500 text-sm border-t border-neutral-800 pt-3">
               <span className="flex items-center gap-1">
                 <MessageCircle size={18} strokeWidth={1.5} />
                 {post.commentCount}
               </span>
               <span className="flex items-center gap-1">
-                <Heart
-                  size={18}
-                  strokeWidth={1.5}
-                  className={post.likedByUser ? "fill-[rgb(249,24,128)] text-[rgb(249,24,128)]" : ""}
-                />
+                <Heart size={18} strokeWidth={1.5} className={post.likedByUser ? "fill-[rgb(249,24,128)] text-[rgb(249,24,128)]" : ""} />
                 {post.likeCount}
               </span>
             </div>
           </div>
         </div>
 
-        {/* ── Comment Section ──────────────────────────────────────────────── */}
+        {/* Comment thread */}
         <CommentSection postId={postId} />
       </ShellLayout>
     </AuthGuard>

@@ -1,15 +1,27 @@
 /**
  * CommentCard — displays a single comment with optional nested replies.
- * Shows user avatar (or fallback icon), name, username, relative timestamp,
- * comment content, and a reply button.
- * Replies are rendered recursively with visual indentation.
+ *
+ * Features:
+ *   - Author avatar (or fallback icon), name, @username, relative timestamp
+ *   - Comment content text
+ *   - Reply button (only on top-level, depth=0 comments)
+ *   - Recursive rendering of nested replies with visual indentation
+ *   - Collapsible reply threads with "Show X replies" / "Hide replies" toggle
+ *   - Vertical connector line for visual thread hierarchy
  */
+
 "use client";
 
+// UI icons
 import { User, MessageCircle } from "lucide-react";
+// Next.js optimized image component
 import Image from "next/image";
+// Link for author profile navigation
 import Link from "next/link";
+// State for reply thread toggling
 import { useState } from "react";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface CommentData {
   id: string;
@@ -26,6 +38,9 @@ interface CommentCardProps {
   onReply: (commentId: string, username: string) => void;
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/** Returns a short relative timestamp (e.g. "5s", "3m", "2h", "1d") */
 function timeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - new Date(date).getTime();
@@ -39,12 +54,16 @@ function timeAgo(date: Date): string {
   return `${diffDays}d`;
 }
 
+// ── Component ──────────────────────────────────────────────────────────────────
+
 export default function CommentCard({ comment, depth = 0, onReply }: CommentCardProps) {
+  // Replies are visible by default at depth 0, hidden deeper
   const [showReplies, setShowReplies] = useState(depth === 0);
   const hasReplies = comment.replies && comment.replies.length > 0;
 
   return (
     <div>
+      {/* Comment row — visually indented for nested replies */}
       <div className={`flex gap-3 px-4 py-3 ${depth > 0 ? "pl-12" : ""}`}>
         {/* Avatar column */}
         <div className="flex-shrink-0">
@@ -78,12 +97,13 @@ export default function CommentCard({ comment, depth = 0, onReply }: CommentCard
             <span className="text-neutral-500">·</span>
             <span className="text-neutral-500 text-sm">{timeAgo(comment.createdAt)}</span>
           </div>
+
           {/* Comment body text */}
           <p className="text-[15px] text-white whitespace-pre-wrap break-words mt-0.5">
             {comment.content}
           </p>
 
-          {/* Reply button — only on top-level comments */}
+          {/* Reply button — only on top-level (depth 0) comments */}
           {depth === 0 && (
             <button
               onClick={() => onReply(comment.id, comment.user.username ?? "")}
@@ -99,11 +119,12 @@ export default function CommentCard({ comment, depth = 0, onReply }: CommentCard
       {/* Nested replies */}
       {hasReplies && (
         <div className="relative">
-          {/* Vertical connector line */}
+          {/* Vertical connector line for visual thread hierarchy */}
           {depth === 0 && (
             <div className="absolute left-[39px] top-0 bottom-0 w-px bg-neutral-800" />
           )}
-          {/* Toggle replies button */}
+
+          {/* Toggle replies button (hidden when replies are visible) */}
           {depth === 0 && !showReplies && (
             <button
               onClick={() => setShowReplies(true)}
@@ -112,16 +133,13 @@ export default function CommentCard({ comment, depth = 0, onReply }: CommentCard
               Show {comment.replies!.length} {comment.replies!.length === 1 ? "reply" : "replies"}
             </button>
           )}
-          {/* Render replies */}
+
+          {/* Render nested replies recursively */}
           {showReplies &&
             comment.replies!.map((reply) => (
-              <CommentCard
-                key={reply.id}
-                comment={reply}
-                depth={depth + 1}
-                onReply={onReply}
-              />
+              <CommentCard key={reply.id} comment={reply} depth={depth + 1} onReply={onReply} />
             ))}
+
           {/* Hide replies button */}
           {depth === 0 && showReplies && comment.replies!.length > 0 && (
             <button

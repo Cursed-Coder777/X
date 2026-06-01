@@ -1,79 +1,81 @@
 /**
- * Profile page — displays a user's profile information, their posts,
- * and provides follow/unfollow, messaging, and profile-editing actions.
- * The page content adapts based on whether the current user owns the profile.
+ * Profile page — route: /profile/[username]
+ *
+ * Displays a user's public profile with their posts, follower/following
+ * counts, and contextual actions (edit, follow, message).
+ *
+ * Behaviour varies by ownership:
+ *   - Own profile: shows "Edit profile" button → opens EditProfileModal
+ *   - Other's profile:
+ *       - "Message" button (only visible when following)
+ *       - "Follow" / "Unfollow" button with optimistic toggle
+ *       - Creates a DM conversation on message click
+ *
+ * Data fetched:
+ *   - User profile (name, username, bio, avatar, banner, counts)
+ *   - User's posts (for the timeline below)
+ *   - Follow status (for the follow/unfollow button)
  */
 
 "use client";
 
-// ── Next.js Navigation ───────────────────────────────────────────────────────
+// Next.js navigation hooks
 import { useParams, useRouter } from "next/navigation";
-
-// ── tRPC API ─────────────────────────────────────────────────────────────────
+// tRPC client for queries and mutations
 import { api } from "~/trpc/react";
-
-// ── NextAuth ─────────────────────────────────────────────────────────────────
+// NextAuth session hook
 import { useSession } from "next-auth/react";
-
-// ── React ────────────────────────────────────────────────────────────────────
+// React hooks
 import { useEffect, useState } from "react";
-
-// ── Custom Components ────────────────────────────────────────────────────────
-import PostCard from "~/app/_components/PostCard";           // Individual post display
-import ShellLayout from "~/app/_components/ShellLayout";     // App shell (sidebar, header, etc.)
-import EditProfileModal from "~/app/_components/EditProfileModal"; // Modal for editing own profile
-import AuthGuard from "~/app/_components/AuthGuard";         // Ensures user is authenticated
-import LoadingScreen from "~/app/_components/LoadingScreen"; // Full-screen spinner
-
-// ── Icons ────────────────────────────────────────────────────────────────────
+// App components
+import PostCard from "~/app/_components/PostCard";
+import ShellLayout from "~/app/_components/ShellLayout";
+import EditProfileModal from "~/app/_components/EditProfileModal";
+import AuthGuard from "~/app/_components/AuthGuard";
+import LoadingScreen from "~/app/_components/LoadingScreen";
+// Icons
 import { Loader2, MessageCircle } from "lucide-react";
 
-/**
- * ProfilePage — page route for "/profile/[username]".
- */
 export default function ProfilePage() {
-  // ── Route Params ────────────────────────────────────────────────────────
+  // Read username from dynamic route params
   const params = useParams<{ username: string }>();
   const username = params?.username ?? "";
 
-  // ── Session ─────────────────────────────────────────────────────────────
+  // Current user session
   const { data: session } = useSession();
   const utils = api.useUtils();
 
-  // ── Data Queries ────────────────────────────────────────────────────────
-  // Fetch the user's public profile by username
+  // ── Data Queries ─────────────────────────────────────────────────────────
   const { data: user, isLoading: userLoading } = api.user.getByUsername.useQuery(
     { username },
     { enabled: !!username }
   );
 
-  // Fetch the user's posts once we have their ID
   const { data: posts, isLoading: postsLoading } = api.user.getUserPosts.useQuery(
     { userId: user?.id ?? "" },
     { enabled: !!user?.id }
   );
 
-  // Check if the current user follows this profile user (skip for own profile)
   const { data: followStatus } = api.user.isFollowing.useQuery(
     { targetUserId: user?.id ?? "" },
     { enabled: !!user?.id && session?.user.id !== user?.id }
   );
 
-  // ── Local State ─────────────────────────────────────────────────────────
+  // ── Local State ──────────────────────────────────────────────────────────
   const [isFollowing, setIsFollowing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Sync the local follow state with the server response
+  // Sync follow status from server response
   useEffect(() => {
     if (followStatus?.isFollowing !== undefined) {
       setIsFollowing(followStatus.isFollowing);
     }
   }, [followStatus?.isFollowing]);
 
-  // ── Router & Mutations ──────────────────────────────────────────────────
+  // ── Router ───────────────────────────────────────────────────────────────
   const router = useRouter();
 
-  // Create a new conversation (for the Message button)
+  // Create a DM conversation (for Message button)
   const createConversation = api.conversation.getOrCreate.useMutation({
     onSuccess: (data) => {
       router.push(`/messages?conversationId=${data.id}`);
@@ -85,22 +87,19 @@ export default function ProfilePage() {
     createConversation.mutate({ participantId: user.id });
   };
 
-  // Optimistic toggle-follow mutation
+  // Optimistic follow toggle
   const toggleFollow = api.user.toggleFollow.useMutation({
     onMutate: async () => {
-      // Cancel any in-flight isFollowing query so it doesn't overwrite optimism
       await utils.user.isFollowing.cancel();
       const previous = utils.user.isFollowing.getData({ targetUserId: user?.id ?? "" });
       setIsFollowing((prev) => !prev);
       return { previous };
     },
     onError: (err, _, context) => {
-      // Revert on error
       setIsFollowing(context?.previous?.isFollowing ?? false);
       console.error(err);
     },
     onSettled: () => {
-      // Invalidate queries to refetch the latest data
       void utils.user.getByUsername.invalidate().catch(console.error);
       if (user?.id) {
         void utils.user.isFollowing.invalidate({ targetUserId: user.id }).catch(console.error);
@@ -122,40 +121,27 @@ export default function ProfilePage() {
   return (
     <AuthGuard>
       <ShellLayout>
-        {/* ── Profile Banner ──────────────────────────────────────────────── */}
+        {/* Profile banner image */}
         {user.bannerUrl && (
           <div className="h-32 sm:h-48 w-full relative bg-neutral-800">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.bannerUrl}
-              alt="Banner"
-              className="object-cover"
-              style={{ objectFit: "cover", width: "100%", height: "100%" }}
-            />
+            <img src={user.bannerUrl} alt="Banner" className="object-cover" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
           </div>
         )}
 
-        {/* ── Profile Info Section ────────────────────────────────────────── */}
+        {/* Profile info section */}
         <div className="p-6 border-b border-neutral-800">
           <div className="flex justify-between items-start">
             <div>
               {/* Avatar */}
               <div className="flex items-center gap-3 mb-2">
                 {user.image ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={user.image}
-                    alt={user.name}
-                    width={48}
-                    height={48}
-                    className="rounded-full object-cover h-12 w-12"
-                  />
+                  <img src={user.image} alt={user.name} width={48} height={48} className="rounded-full object-cover h-12 w-12" />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-neutral-700" />
                 )}
               </div>
 
-              {/* Name, username, bio */}
+              {/* Name, @username, bio */}
               <h1 className="text-2xl font-bold text-white">{user.name}</h1>
               <p className="text-neutral-500">@{user.username}</p>
               {user.bio && <p className="mt-2 text-white">{user.bio}</p>}
@@ -168,9 +154,8 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ── Action Buttons ────────────────────────────────────────── */}
+            {/* Action buttons */}
             {isOwnProfile ? (
-              /* Edit profile button (own profile) */
               <button
                 onClick={() => setShowEditModal(true)}
                 className="rounded-full px-4 py-2 font-semibold text-sm transition border border-neutral-600 text-white bg-black hover:bg-neutral-900"
@@ -178,9 +163,8 @@ export default function ProfilePage() {
                 Edit profile
               </button>
             ) : (
-              /* Message & Follow / Unfollow buttons (someone else's profile) */
               <div className="flex items-center gap-2">
-                {/* Message button — visible only when following */}
+                {/* Message button — only visible when following */}
                 {isFollowing && (
                   <button
                     onClick={handleMessage}
@@ -196,7 +180,7 @@ export default function ProfilePage() {
                   </button>
                 )}
 
-                {/* Follow / Unfollow button */}
+                {/* Follow / Unfollow toggle */}
                 <button
                   onClick={handleFollow}
                   disabled={toggleFollow.isPending}
@@ -221,12 +205,10 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── User's Posts ─────────────────────────────────────────────────── */}
+        {/* User's posts */}
         <div className="divide-y divide-neutral-800">
           {postsLoading && <div className="p-4 text-neutral-500">Loading posts...</div>}
-          {posts?.map((post) => (
-            <PostCard key={post.id} {...post} />
-          ))}
+          {posts?.map((post) => <PostCard key={post.id} {...post} />)}
           {posts?.length === 0 && !postsLoading && (
             <div className="p-4 text-neutral-500">No posts yet.</div>
           )}

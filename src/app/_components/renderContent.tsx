@@ -1,30 +1,30 @@
 /**
- * renderContent — parses a string of text and returns an array of React nodes
- * where hashtags (#word), mentions (@user), and URLs (https://...) are rendered
- * as clickable styled elements.
+ * renderContent — parses text and renders hashtags, mentions, and URLs
+ * as clickable elements with X-style blue links.
  *
- * Hashtags → navigate to /search?q=#word
- * Mentions → navigate to /profile/user
- * URLs     → open in a new tab via <a> with rel="noopener noreferrer"
+ * Pattern matching:
+ *   #word        → navigates to /search?q=%23word
+ *   @user        → navigates to /profile/user
+ *   https://...  → opens in a new tab via <a target="_blank">
  *
- * Router is passed in rather than using a hook so this function works
- * in contexts where hooks are unavailable (e.g. inside a callback).
+ * The router is passed as a parameter (not via hook) so this utility
+ * can be used outside of React components or in callbacks.
  */
 
-// Import only the type so we don't actually invoke the hook here
+// Import only the type to avoid invoking the hook here
 import type { useRouter } from "next/navigation";
 
 export function renderContent(text: string, router: ReturnType<typeof useRouter>) {
-  // Accumulator for text segments and interactive elements
+  // Accumulator for text segments and interactive React nodes
   const parts: React.ReactNode[] = [];
-  // Regex: matches #word, @user, or http(s)://... URLs
+  // Regex matches hashtags (#word), mentions (@user), and URLs (http(s)://...)
   const pattern = /(#\w+|@\w+|https?:\/\/\S+)/g;
   let lastIndex = 0;
   let match;
 
-  // Walk through all matches in the input text
+  // Iterate through all matches in the input text
   while ((match = pattern.exec(text)) !== null) {
-    // Push any plain text before this match
+    // Append any plain text before this match
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
@@ -32,7 +32,7 @@ export function renderContent(text: string, router: ReturnType<typeof useRouter>
     const i = parts.length;
 
     if (matched.startsWith("#")) {
-      // Hashtag → clickable span that navigates to search
+      // Hashtag → blue clickable span that navigates to search
       parts.push(
         <span
           key={i}
@@ -43,7 +43,7 @@ export function renderContent(text: string, router: ReturnType<typeof useRouter>
         </span>
       );
     } else if (matched.startsWith("@")) {
-      // Mention → clickable span that navigates to the user's profile
+      // Mention → blue clickable span that navigates to the user's profile
       parts.push(
         <span
           key={i}
@@ -54,7 +54,7 @@ export function renderContent(text: string, router: ReturnType<typeof useRouter>
         </span>
       );
     } else {
-      // URL → anchor tag opening in a new tab
+      // URL → anchor tag that opens in a new tab
       parts.push(
         <a
           key={i}
@@ -69,7 +69,7 @@ export function renderContent(text: string, router: ReturnType<typeof useRouter>
       );
     }
 
-    // Advance the slice cursor past this match
+    // Move the slice cursor past the current match
     lastIndex = match.index + matched.length;
   }
 

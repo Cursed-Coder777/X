@@ -1,4 +1,11 @@
 /**
+ * Next.js configuration for the X Clone project.
+ *
+ * This file is evaluated at build/start time. It imports the env validation
+ * module to fail fast if required environment variables are missing.
+ */
+
+/**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
  * This is especially useful for Docker builds where env vars may not be
  * available at build time.

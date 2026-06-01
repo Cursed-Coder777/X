@@ -1,7 +1,37 @@
+/**
+ * Post router — core social media operations for creating, reading, updating,
+ * and interacting with posts.
+ *
+ * Endpoints:
+ *   create          — create a new post (280 chars max, optional image/GIF/poll)
+ *   delete          — delete your own post (ownership check)
+ *   getById         — fetch a single post with interaction state
+ *   getAll          — fetch all posts (newest first) for the main feed
+ *   toggleLike      — like/unlike a post (idempotent, creates notification)
+ *   toggleBookmark  — bookmark/remove bookmark (idempotent)
+ *   toggleRepost    — repost/unrepost a post (idempotent, creates notification)
+ *   getBookmarkedPosts — fetch all posts bookmarked by the current user
+ *   getFeed         — paginated feed with cursor-based infinite scroll
+ *                    (supports "For You" and "Following" modes, includes reposts)
+ *   search          — search posts by content text
+ *   searchAll       — combined search (posts + users), supports @username prefix
+ *   getTrending     — top 5 hashtags from the last 7 days
+ *
+ * All endpoints require authentication.
+ * Returned posts include user interaction state (likedByUser, bookmarkedByUser, etc.)
+ * and poll data with user's vote status where applicable.
+ */
+
+// Zod runtime validation library — provides schema-based input validation
 import { z } from "zod";
+// tRPC error class for throwing typed errors (NOT_FOUND, FORBIDDEN, BAD_REQUEST)
 import { TRPCError } from "@trpc/server";
+// Router factory and auth-guarded procedure from the shared tRPC setup
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+// ── Type Definitions ───────────────────────────────────────────────────────────
+
+/** Minimal author data included in every post response */
 interface PostAuthor {
   id: string;
   name: string | null;
@@ -9,12 +39,14 @@ interface PostAuthor {
   image: string | null;
 }
 
+/** Raw poll option data from Prisma with vote count */
 interface PollOptionData {
   id: string;
   text: string;
   _count: { votes: number };
 }
 
+/** Processed poll data ready for the client */
 interface PollData {
   id: string;
   options: PollOptionData[];
@@ -23,6 +55,7 @@ interface PollData {
   userVotedOptionIds: string[];
 }
 
+/** Complete post item shape returned by feed/list endpoints */
 interface PostFeedItem {
   id: string;
   content: string;
@@ -42,6 +75,15 @@ interface PostFeedItem {
   poll: PollData | null;
 }
 
+// ── Helper Functions ───────────────────────────────────────────────────────────
+
+/**
+ * Creates a Prisma `include` object for post queries that eagerly loads:
+ * - The author's public profile fields
+ * - Whether the current user has liked, bookmarked, or reposted this post
+ * - Counts of likes, comments, and reposts
+ * - Poll data with options and their vote counts
+ */
 function postInclude(userId: string) {
   return {
     author: { select: { id: true, name: true, username: true, image: true } },
@@ -59,7 +101,12 @@ function postInclude(userId: string) {
   };
 }
 
+// ── Router ─────────────────────────────────────────────────────────────────────
+
 export const postRouter = createTRPCRouter({
+  // ── create ───────────────────────────────────────────────────────────────
+  // Create a new post (280 chars max). Optionally attach an image URL, a GIF URL,
+  // and/or a poll (2–4 options, 1–4 max votes per user).
   create: protectedProcedure
     .input(z.object({
       content: z.string().min(1).max(280),
@@ -69,12 +116,14 @@ export const postRouter = createTRPCRouter({
       pollMaxVotes: z.number().int().min(1).max(4).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Create the post and optionally nest a poll with its options in the same query
       const post = await ctx.db.post.create({
         data: {
           content: input.content,
           imageUrl: input.imageUrl,
           gifUrl: input.gifUrl,
           authorId: ctx.session.user.id,
+          // Only create a poll if pollOptions has at least 2 entries
           ...(input.pollOptions && input.pollOptions.length >= 2
             ? {
                 poll: {
@@ -92,6 +141,8 @@ export const postRouter = createTRPCRouter({
       return post;
     }),
 
+  // ── delete ───────────────────────────────────────────────────────────────
+  // Delete a post. Only the post's author may delete it (FORBIDDEN otherwise).
   delete: protectedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -105,6 +156,9 @@ export const postRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  // ── getById ──────────────────────────────────────────────────────────────
+  // Fetch a single post by its ID. Returns null if not found.
+  // Includes interaction state (liked, bookmarked) and poll vote status.
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -115,6 +169,7 @@ export const postRouter = createTRPCRouter({
       });
       if (!post) return null;
 
+      // Check which poll options the current user has voted for
       let userVotedOptionIds: string[] = [];
       if (post.poll) {
         const votes = await ctx.db.vote.findMany({
@@ -124,6 +179,7 @@ export const postRouter = createTRPCRouter({
         userVotedOptionIds = votes.map((v) => v.optionId);
       }
 
+      // Flatten Prisma relations into simple boolean flags and counts
       return {
         ...post,
         likedByUser: post.likes.length > 0,
@@ -149,6 +205,8 @@ export const postRouter = createTRPCRouter({
       };
     }),
 
+  // ── getAll ───────────────────────────────────────────────────────────────
+  // Fetch ALL posts newest-first for the full "For You" feed.
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
     const posts = await ctx.db.post.findMany({
@@ -200,6 +258,9 @@ export const postRouter = createTRPCRouter({
     );
   }),
 
+  // ── toggleLike ───────────────────────────────────────────────────────────
+  // Toggle like on a post. Creates or deletes the Like record. If liking
+  // someone else's post, creates a LIKE notification for the post author.
   toggleLike: protectedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -217,6 +278,7 @@ export const postRouter = createTRPCRouter({
           select: { authorId: true },
         });
         await ctx.db.like.create({ data: { userId, postId } });
+        // Notify the post author unless they liked their own post
         if (post && post.authorId !== userId) {
           await ctx.db.notification.create({
             data: { type: "LIKE", recipientId: post.authorId, actorId: userId, postId },
@@ -226,6 +288,8 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
+  // ── toggleBookmark ───────────────────────────────────────────────────────
+  // Toggle bookmark on a post. Creates or deletes the Bookmark record.
   toggleBookmark: protectedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -243,6 +307,9 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
+  // ── toggleRepost ─────────────────────────────────────────────────────────
+  // Toggle repost on a post. Creates or deletes the Repost record. If
+  // reposting someone else's post, creates a REPOST notification.
   toggleRepost: protectedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -269,6 +336,8 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
+  // ── getBookmarkedPosts ───────────────────────────────────────────────────
+  // Fetch all posts that the current user has bookmarked, newest first.
   getBookmarkedPosts: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
     const bookmarks = await ctx.db.bookmark.findMany({
@@ -327,6 +396,11 @@ export const postRouter = createTRPCRouter({
     );
   }),
 
+  // ── getFeed ──────────────────────────────────────────────────────────────
+  // Cursor-based paginated feed. Supports two modes:
+  //   onlyFollowing=false → all posts ("For You")
+  //   onlyFollowing=true  → only posts/reposts from followed users ("Following")
+  // Returns up to `limit` items per page. The `cursor` is an ISO datetime string.
   getFeed: protectedProcedure
     .input(z.object({
       onlyFollowing: z.boolean().default(false),
@@ -338,6 +412,7 @@ export const postRouter = createTRPCRouter({
       const currentUserId = ctx.session.user.id;
       const cursorWhere = cursor ? { createdAt: { lt: new Date(cursor) } } : {};
 
+      // ── Helper: flatten a raw Prisma post into the PostFeedItem shape ──
       async function flatten(post: {
         id: string;
         content: string;
@@ -404,6 +479,8 @@ export const postRouter = createTRPCRouter({
 
       let items: PostFeedItem[];
       if (onlyFollowing) {
+        // ── "Following" tab ──
+        // Fetch followed user IDs, then get both direct posts and reposts
         const followedUsers = await ctx.db.follow.findMany({
           where: { followerId: currentUserId },
           select: { followingId: true },
@@ -413,6 +490,7 @@ export const postRouter = createTRPCRouter({
           return { items: [], nextCursor: undefined };
         }
 
+        // Get direct posts from followed users
         const directPosts = await ctx.db.post.findMany({
           where: { ...cursorWhere, authorId: { in: followedIds } },
           orderBy: { createdAt: "desc" },
@@ -420,6 +498,8 @@ export const postRouter = createTRPCRouter({
           include: postInclude(currentUserId),
         });
 
+        // Get reposts by followed users (shows posts from non-followed users
+        // that were reposted by someone the current user follows)
         const repostsByFollowed = await ctx.db.repost.findMany({
           where: { ...cursorWhere, userId: { in: followedIds } },
           orderBy: { createdAt: "desc" },
@@ -430,6 +510,7 @@ export const postRouter = createTRPCRouter({
           },
         });
 
+        // Deduplicate: skip reposts of posts already in directPosts
         const directIds = new Set(directPosts.map((p) => p.id));
         const repostMap = new Map<string, (typeof repostsByFollowed)[0]>();
         for (const r of repostsByFollowed) {
@@ -449,10 +530,12 @@ export const postRouter = createTRPCRouter({
           }),
         );
 
+        // Merge and sort by creation date (newest first)
         items = [...directItems, ...repostItems].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
       } else {
+        // ── "For You" tab ──
         const posts = await ctx.db.post.findMany({
           where: cursorWhere,
           orderBy: { createdAt: "desc" },
@@ -462,6 +545,7 @@ export const postRouter = createTRPCRouter({
         items = await Promise.all(posts.map((p) => flatten(p)));
       }
 
+      // Determine if there are more items and compute the next cursor
       const hasMore = items.length > limit;
       const page = hasMore ? items.slice(0, limit) : items;
       const nextCursor = hasMore ? page[page.length - 1]!.createdAt.toISOString() : undefined;
@@ -469,6 +553,8 @@ export const postRouter = createTRPCRouter({
       return { items: page, nextCursor };
     }),
 
+  // ── search ───────────────────────────────────────────────────────────────
+  // Search posts by content text (substring match). Returns up to 50 results.
   search: protectedProcedure
     .input(z.object({ query: z.string().min(1).max(100) }))
     .query(async ({ ctx, input }) => {
@@ -523,6 +609,10 @@ export const postRouter = createTRPCRouter({
       );
     }),
 
+  // ── searchAll ────────────────────────────────────────────────────────────
+  // Combined search for both posts and users. If the query starts with "@",
+  // only searches for users by username (excluding the @ prefix).
+  // Otherwise searches both user names/usernames and post content.
   searchAll: protectedProcedure
     .input(z.object({ query: z.string().min(1).max(100) }))
     .query(async ({ ctx, input }) => {
@@ -531,6 +621,7 @@ export const postRouter = createTRPCRouter({
       const isUserSearch = q.startsWith("@");
       const term = isUserSearch ? q.slice(1) : q;
 
+      // @username search — only find users
       if (isUserSearch) {
         const users = (await ctx.db.user.findMany({
           where: { username: { contains: term } },
@@ -540,6 +631,7 @@ export const postRouter = createTRPCRouter({
         return { users, posts: [] };
       }
 
+      // General search — find both users and posts
       const [users, posts] = await Promise.all([
         (ctx.db.user.findMany({
           where: { OR: [{ name: { contains: term } }, { username: { contains: term } }] },
@@ -601,12 +693,18 @@ export const postRouter = createTRPCRouter({
       };
     }),
 
+  // ── getTrending ──────────────────────────────────────────────────────────
+  // Compute the top 5 trending hashtags from the last 7 days.
+  // Scans up to 500 recent posts, extracts hashtags via regex (#word),
+  // counts occurrences, and returns the top 5 sorted by frequency.
   getTrending: protectedProcedure.query(async ({ ctx }) => {
+    // Fetch posts from the last 7 days
     const recentPosts = await ctx.db.post.findMany({
       where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
       select: { content: true },
       take: 500,
     });
+    // Count hashtag occurrences
     const hashtagCount = new Map<string, number>();
     for (const post of recentPosts) {
       const tags = post.content.match(/#\w+/g);
@@ -617,6 +715,7 @@ export const postRouter = createTRPCRouter({
         }
       }
     }
+    // Sort by count descending and return top 5
     return Array.from(hashtagCount.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)

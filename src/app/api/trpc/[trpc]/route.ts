@@ -1,26 +1,36 @@
 /**
- * tRPC HTTP API route handler.
- * Uses fetchRequestHandler from @trpc/server to process all tRPC requests
- * at /api/trpc/{path}. Creates context from the incoming request headers
- * and logs errors in development mode.
- * Handles both GET (queries) and POST (mutations) requests.
+ * tRPC HTTP API route handler — serves the entire tRPC API at /api/trpc/{path}.
+ *
+ * Uses fetchRequestHandler from @trpc/server to bridge the fetch-based
+ * Next.js App Router with tRPC's request/response lifecycle.
+ *
+ * This single handler processes:
+ *   - GET requests  → tRPC queries (data fetching)
+ *   - POST requests → tRPC mutations (data modifications)
+ *
+ * Flow:
+ *   1. Build request-scoped context (session, db, headers)
+ *   2. Pass the incoming request to the tRPC fetch adapter
+ *   3. The adapter resolves the URL to a procedure in appRouter
+ *   4. The procedure runs with the context, returning data or throwing errors
+ *   5. Errors are logged in development mode
  */
 
-// fetchRequestHandler is the adapter that connects tRPC to any fetch-based runtime (Next.js App Router)
+// fetchRequestHandler — tRPC adapter for fetch-based runtimes (Next.js App Router, Cloudflare, etc.)
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-// NextRequest is the typed request object from Next.js server components
+// NextRequest — typed request object from Next.js server functions
 import { type NextRequest } from "next/server";
 
-// env provides validated environment variables (via t3-env)
+// Environment variables (validated at startup by ~/env.js)
 import { env } from "~/env";
-// appRouter is the root tRPC router that combines all sub-routers (posts, users, etc.)
+// Root tRPC router — merges all sub-routers (post, user, comment, etc.)
 import { appRouter } from "~/server/api/root";
-// createTRPCContext builds the request-scoped context (session, db, headers) for every tRPC call
+// Context factory — provides db + session for every tRPC procedure
 import { createTRPCContext } from "~/server/api/trpc";
 
 /**
  * Wraps createTRPCContext so it receives only the request headers.
- * This context is passed to every tRPC procedure in the request.
+ * This context is passed to every tRPC procedure in the request pipeline.
  */
 const createContext = async (req: NextRequest) => {
   return createTRPCContext({
@@ -28,27 +38,21 @@ const createContext = async (req: NextRequest) => {
   });
 };
 
-// The unified handler for both GET (queries) and POST (mutations)
+// Unified handler for both GET and POST
 const handler = (req: NextRequest) =>
   fetchRequestHandler({
-    // The base path for all tRPC endpoints
-    endpoint: "/api/trpc",
-    // The incoming fetch request
-    req,
-    // The root router that resolves `req.url` to a procedure
-    router: appRouter,
-    // Build the request-scoped context
-    createContext: () => createContext(req),
-    // Error logging — only log details in development mode
+    endpoint: "/api/trpc",        // Base path for all tRPC endpoints
+    req,                          // The incoming fetch request
+    router: appRouter,            // The root router that resolves procedures
+    createContext: () => createContext(req),  // Build request-scoped context
+    // Error logging — only verbose in development mode
     onError:
       env.NODE_ENV === "development"
         ? ({ path, error }) => {
-            console.error(
-              `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
-            );
+            console.error(`❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`);
           }
         : undefined,
   });
 
-// Export the same handler for both GET and POST HTTP methods
+// Export the same handler for both HTTP methods
 export { handler as GET, handler as POST };

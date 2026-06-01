@@ -1,27 +1,40 @@
 /**
  * CommentSection — comment input form + threaded comment tree for a post.
- * Fetches comments via comment.getByPost (tree structure), allows creating
- * new top-level replies or inline replies to specific comments.
- * Shows loading, empty, and error states.
+ *
+ * Features:
+ *   - Top-level comment input box at the top
+ *   - Inline reply form (appears when user clicks "Reply" on a comment)
+ *   - Renders the threaded comment tree via CommentCard
+ *   - Loading, empty, and error states
+ *   - Invalidates both comment and feed caches on successful post
  */
+
 "use client";
 
+// React hook for state management
 import { useState } from "react";
+// tRPC client for comment queries and mutations
 import { api } from "~/trpc/react";
+// Recursive comment tree component
 import CommentCard from "./CommentCard";
 
 export default function CommentSection({ postId }: { postId: string }) {
+  // tRPC utility bag for cache invalidation
   const utils = api.useUtils();
+
+  // Top-level comment input state
   const [content, setContent] = useState("");
 
-  // Inline reply state: which comment we're replying to
+  // Inline reply state — tracks which comment we're replying to
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(null);
   const [replyContent, setReplyContent] = useState("");
 
-  // Query: fetch all comments as a tree
+  // ── Queries ───────────────────────────────────────────────────────────────
+  // Fetch all comments for this post as a tree structure
   const { data: comments, isLoading } = api.comment.getByPost.useQuery({ postId });
 
-  // Mutation: create a top-level comment
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  // Create a top-level comment
   const createComment = api.comment.create.useMutation({
     onSuccess: async () => {
       setContent("");
@@ -36,7 +49,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     },
   });
 
-  // Mutation: create a reply to a comment
+  // Create a reply (nested comment with parentId)
   const createReply = api.comment.create.useMutation({
     onSuccess: async () => {
       setReplyContent("");
@@ -52,7 +65,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     },
   });
 
-  // Submit top-level comment
+  // ── Event Handlers ────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
@@ -60,24 +73,19 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
-  // Submit inline reply
   const handleReplySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (replyContent.trim() && replyingTo) {
-      createReply.mutate({
-        postId,
-        content: replyContent,
-        parentId: replyingTo.commentId,
-      });
+      createReply.mutate({ postId, content: replyContent, parentId: replyingTo.commentId });
     }
   };
 
-  // Handle reply button click from CommentCard
   const handleReply = (commentId: string, username: string) => {
     setReplyingTo({ commentId, username });
     setReplyContent("");
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="border-t border-neutral-800">
       {/* Top-level comment input */}
@@ -99,17 +107,14 @@ export default function CommentSection({ postId }: { postId: string }) {
         </button>
       </form>
 
-      {/* Inline reply form */}
+      {/* Inline reply form (shown when replying to a specific comment) */}
       {replyingTo && (
         <div className="border-t border-neutral-800 px-4 py-3 bg-neutral-900/50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-neutral-500">
               Replying to <span className="text-[rgb(29,155,240)]">@{replyingTo.username}</span>
             </span>
-            <button
-              onClick={() => setReplyingTo(null)}
-              className="text-neutral-500 hover:text-white text-sm"
-            >
+            <button onClick={() => setReplyingTo(null)} className="text-neutral-500 hover:text-white text-sm">
               Cancel
             </button>
           </div>
@@ -134,7 +139,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         </div>
       )}
 
-      {/* Comments tree */}
+      {/* Comment tree */}
       {isLoading && <div className="px-4 py-3 text-sm text-neutral-500">Loading replies...</div>}
       {comments?.map((comment) => (
         <CommentCard key={comment.id} comment={comment} onReply={handleReply} />

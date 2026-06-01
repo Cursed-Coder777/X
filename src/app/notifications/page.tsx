@@ -1,31 +1,31 @@
 /**
- * Notifications page — displays all user notifications (likes, reposts, comments, follows).
- * Supports marking individual and all notifications as read.
- * Each notification navigates to the relevant post or user profile on click.
+ * Notifications page — route: /notifications
+ *
+ * Displays all in-app notifications for the current user:
+ *   - LIKE: someone liked your post
+ *   - REPOST: someone reposted your post
+ *   - COMMENT: someone replied to your post
+ *   - FOLLOW: someone followed you
+ *
+ * Features:
+ *   - "Mark all as read" button in the header (shown when unread exist)
+ *   - Each notification navigates to the relevant post or user profile
+ *   - Individual notification is auto-marked as read on click
+ *   - Unread indicator (blue dot) on each unread notification
+ *   - Bell icon empty state
+ *   - Loading state with spinner
  */
 
 "use client";
 
-// ── Custom Components ────────────────────────────────────────────────────────
-import AuthGuard from "~/app/_components/AuthGuard";     // Ensures user is authenticated
-import ShellLayout from "~/app/_components/ShellLayout"; // App shell (sidebar, header, etc.)
-
-// ── tRPC API ─────────────────────────────────────────────────────────────────
+import AuthGuard from "~/app/_components/AuthGuard";
+import ShellLayout from "~/app/_components/ShellLayout";
 import { api, type RouterOutputs } from "~/trpc/react";
-
-// ── Next.js Router ───────────────────────────────────────────────────────────
 import { useRouter } from "next/navigation";
-
-// ── Icons ────────────────────────────────────────────────────────────────────
 import { User, Loader2, Heart, Repeat2, MessageCircle, UserPlus } from "lucide-react";
 
-// Type alias for a single notification item
 type NotificationItem = RouterOutputs["notification"]["getAll"][number];
 
-/**
- * timeAgo — returns a human-readable relative timestamp.
- * e.g. "just now", "5m", "3h", "2d"
- */
 function timeAgo(date: Date): string {
   const diffMs = Date.now() - new Date(date).getTime();
   const diffSecs = Math.floor(diffMs / 1000);
@@ -38,9 +38,6 @@ function timeAgo(date: Date): string {
   return `${diffDays}d`;
 }
 
-/**
- * typeConfig — maps each notification type to its icon component and text colour.
- */
 const typeConfig = {
   LIKE:    { icon: Heart,        color: "text-pink-500" },
   REPOST:  { icon: Repeat2,      color: "text-green-500" },
@@ -48,22 +45,13 @@ const typeConfig = {
   FOLLOW:  { icon: UserPlus,     color: "text-blue-400" },
 } as const;
 
-/**
- * NotificationsPage — page route for "/notifications".
- */
 export default function NotificationsPage() {
   const router = useRouter();
   const utils = api.useUtils();
-
-  // Fetch all notifications
   const { data: notifications, isLoading } = api.notification.getAll.useQuery();
-
-  // Mutation to mark a single notification as read
   const markAsRead = api.notification.markAsRead.useMutation({
     onSuccess: () => void utils.notification.getUnreadCount.invalidate(),
   });
-
-  // Mutation to mark all notifications as read
   const markAllAsRead = api.notification.markAllAsRead.useMutation({
     onSuccess: () => {
       void utils.notification.getUnreadCount.invalidate();
@@ -71,47 +59,30 @@ export default function NotificationsPage() {
     },
   });
 
-  /**
-   * handleClick — navigates to the relevant entity when a notification is tapped.
-   * Also marks the notification as read if it was unread.
-   */
   const handleClick = async (n: NotificationItem) => {
-    if (!n.read) {
-      markAsRead.mutate({ id: n.id });
-    }
-    if (n.type === "FOLLOW") {
-      router.push(`/profile/${n.actor.username}`);
-    } else if (n.post) {
-      router.push(`/post/${n.post.id}`);
-    }
+    if (!n.read) markAsRead.mutate({ id: n.id });
+    if (n.type === "FOLLOW") router.push(`/profile/${n.actor.username}`);
+    else if (n.post) router.push(`/post/${n.post.id}`);
   };
 
   return (
     <AuthGuard>
       <ShellLayout>
-        {/* ── Sticky Header with "Mark all as read" ──────────────────────── */}
+        {/* Sticky header */}
         <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-neutral-800 flex items-center justify-between px-4 py-3">
           <h1 className="text-xl font-bold">Notifications</h1>
-          {/* Show "Mark all as read" only when there are unread notifications */}
           {notifications?.some((n) => !n.read) && (
-            <button
-              onClick={() => markAllAsRead.mutate()}
-              disabled={markAllAsRead.isPending}
-              className="text-sm font-semibold text-[rgb(29,155,240)] hover:underline"
-            >
+            <button onClick={() => markAllAsRead.mutate()} disabled={markAllAsRead.isPending}
+              className="text-sm font-semibold text-[rgb(29,155,240)] hover:underline">
               {markAllAsRead.isPending ? "Marking..." : "Mark all as read"}
             </button>
           )}
         </div>
 
-        {/* ── Loading State ──────────────────────────────────────────────── */}
-        {isLoading && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-neutral-500" size={24} />
-          </div>
-        )}
+        {/* Loading state */}
+        {isLoading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-neutral-500" size={24} /></div>}
 
-        {/* ── Empty State ────────────────────────────────────────────────── */}
+        {/* Empty state */}
         {notifications?.length === 0 && (
           <div className="p-12 text-center text-neutral-500">
             <BellIcon className="mx-auto mb-4" size={32} />
@@ -120,38 +91,20 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* ── Notification List ──────────────────────────────────────────── */}
+        {/* Notification list */}
         <div>
           {notifications?.map((n) => {
             const config = typeConfig[n.type as keyof typeof typeConfig] ?? typeConfig.LIKE;
             const Icon = config.icon;
             return (
-              <button
-                key={n.id}
-                onClick={() => handleClick(n)}
-                className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-neutral-900/50 transition-colors border-b border-neutral-800 ${
-                  !n.read ? "bg-neutral-900/30" : ""
-                }`}
-              >
-                {/* Notification type icon */}
-                <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                  <div className={`${config.color}`}>
-                    <Icon size={20} />
-                  </div>
-                </div>
-
-                {/* Actor avatar */}
+              <button key={n.id} onClick={() => handleClick(n)}
+                className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-neutral-900/50 transition-colors border-b border-neutral-800 ${!n.read ? "bg-neutral-900/30" : ""}`}>
+                <div className={`flex-shrink-0 ${config.color}`}><Icon size={20} /></div>
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-neutral-700 overflow-hidden flex items-center justify-center">
-                    {n.actor.image ? (
-                      <img src={n.actor.image} alt="" className="w-full h-full object-cover" width={40} height={40} />
-                    ) : (
-                      <User size={20} className="text-neutral-400" />
-                    )}
+                    {n.actor.image ? <img src={n.actor.image} alt="" className="w-full h-full object-cover" width={40} height={40} /> : <User size={20} className="text-neutral-400" />}
                   </div>
                 </div>
-
-                {/* Notification body */}
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] leading-snug">
                     <span className="font-bold hover:underline cursor-pointer">{n.actor.name}</span>{" "}
@@ -160,19 +113,10 @@ export default function NotificationsPage() {
                     {n.type === "COMMENT" && "replied to your post"}
                     {n.type === "FOLLOW" && "followed you"}
                   </p>
-                  {/* Show a truncated preview of the post content (not for follows) */}
-                  {n.post && n.type !== "FOLLOW" && (
-                    <p className="text-neutral-500 text-[15px] truncate mt-0.5">{n.post.content}</p>
-                  )}
+                  {n.post && n.type !== "FOLLOW" && <p className="text-neutral-500 text-[15px] truncate mt-0.5">{n.post.content}</p>}
                   <p className="text-neutral-500 text-[13px] mt-1">{timeAgo(n.createdAt)}</p>
                 </div>
-
-                {/* Unread indicator dot */}
-                {!n.read && (
-                  <div className="flex-shrink-0 mt-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[rgb(29,155,240)]" />
-                  </div>
-                )}
+                {!n.read && <div className="flex-shrink-0 mt-2"><div className="h-2.5 w-2.5 rounded-full bg-[rgb(29,155,240)]" /></div>}
               </button>
             );
           })}
@@ -182,9 +126,6 @@ export default function NotificationsPage() {
   );
 }
 
-/**
- * BellIcon — inline SVG component for the "nothing yet" empty state illustration.
- */
 function BellIcon({ className, size }: { className?: string; size: number }) {
   return (
     <svg viewBox="0 0 24 24" className={className} width={size} height={size} fill="none" stroke="currentColor" strokeWidth={1.5}>
